@@ -25,9 +25,8 @@ vm_disk_type: "scsi"
 vm_scsi_hardware: "virtio-scsi-pci"
 vm_network_bridge: "vmbr0"
 
-# OS Image Reference
-# This points to the Cloud-Init image file you uploaded to Proxmox
-vm_os_image: "local:999/debian12.qcow2"
+vm_os_image: "/var/lib/vz/snippets/debian-12.qcow2"
+target_storage: "local-lvm"
 
 # Cloud-Init Public SSH Key
 # Replace this with your actual public key so you can log into the VM later
