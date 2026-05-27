@@ -1,0 +1,11 @@
+# Ignore local Ansible execution traces and custom configurations
+*.retry
+.ansible_vault_pass
+
+# Ignore local environment test files inside application configurations
+**/.env
+**/local_secret_*
+
+# Ignore system or media files inside tracking directories
+.DS_Store
+Thumbs.db
