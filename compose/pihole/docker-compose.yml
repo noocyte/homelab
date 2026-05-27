@@ -16,7 +16,6 @@ services:
       - dnsmasq_config:/etc/dnsmasq.d
       # Mount your Git-managed list directly into the container
       - ./adlists.list:/etc/pihole/adlists.list:ro
-    # This automatically injects the lists into the DB and updates gravity on startup
     entrypoint: >
       bash -c "
       echo 'Importing Git-managed adlists...';
@@ -27,7 +26,7 @@ services:
         done < /etc/pihole/adlists.list
         pihole -g
       fi;
-      exec /s6-init
+      exec /init
       "
 
 volumes:
