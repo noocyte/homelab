@@ -4,32 +4,31 @@
   gather_facts: false
 
   tasks:
-    - name: Create the Virtual Machine from Cloud-Init Template
+    - name: Clone VM from Golden Cloud-Init Template via SSH
+      ansible.builtin.command: >
+        ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+        "qm clone {{ vm_template_source }} {{ vm_id }} --name {{ vm_name }} --full true --storage {{ target_storage }}"
+      changed_when: true
+
+    - name: Configure Hardware Specs and Cloud-Init Overrides
       community.proxmox.proxmox_kvm:
         api_host: "{{ pve_api_host }}"
         api_user: "{{ pve_api_user }}"
         api_password: "{{ lookup('ansible.builtin.env', 'PVE_PASSWORD') }}"
+        validate_certs: false
         node: "{{ pve_node }}"
         vmid: "{{ vm_id }}"
-        name: "{{ vm_name }}"
-        
+
+        # Hardware Tune-up
         cores: "{{ vm_cores }}"
         memory: "{{ vm_memory }}"
-        scsihw: "{{ vm_scsi_hardware }}"
-        
-        netif:
-          net0: "virtio,bridge={{ vm_network_bridge }}"
-        
-        disk:
-          - size: "{{ vm_disk_size }}"
-            type: "{{ vm_disk_type }}"
-            storage: "{{ target_storage }}"
-            import_from: "{{ vm_os_image }}"
-            
+
+        # Cloud-Init Inject (SSH Key & DHCP)
         sshkeys: "{{ vm_ssh_public_key }}"
         ipconfig:
           ipconfig0: "ip=dhcp"
-          
+
+        update: true
         state: present
 
     - name: Start the Virtual Machine
@@ -37,6 +36,7 @@
         api_host: "{{ pve_api_host }}"
         api_user: "{{ pve_api_user }}"
         api_password: "{{ lookup('ansible.builtin.env', 'PVE_PASSWORD') }}"
+        validate_certs: false
         node: "{{ pve_node }}"
         vmid: "{{ vm_id }}"
         state: started
