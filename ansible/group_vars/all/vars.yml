@@ -1,21 +1,18 @@
 ---
-# Versioning tracking values
+# Portainer
 portainer_image: "portainer/portainer-ce:lts"
-
-# Port mappings
 portainer_web_port: "9443"
 
 ---
----
 # Proxmox Cluster Connection Details
-pve_api_host: "192.168.1.100"
+pve_api_host: "192.168.1.107"
 pve_api_user: "root@pam"
 pve_node: "pve"
 target_storage: "local-lvm"
 
 # VM Identity
 vm_id: 800
-vm_name: "docker-host-prod"
+vm_name: "docker-host"
 
 # Dynamic Hardware Specs
 vm_cores: 2
@@ -25,9 +22,9 @@ vm_disk_type: "scsi"
 vm_scsi_hardware: "virtio-scsi-pci"
 vm_network_bridge: "vmbr0"
 
+# OS Image
 vm_os_image: "/var/lib/vz/snippets/debian-12.qcow2"
 target_storage: "local-lvm"
 
 # Cloud-Init Public SSH Key
-# Replace this with your actual public key so you can log into the VM later
 vm_ssh_public_key: "ssh-rsa AAAAB3Nza..."
