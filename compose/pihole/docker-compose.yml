@@ -1,0 +1,22 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    # Pour the host's networking ports directly into the container
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"   # Only required if you intend to use Pi-hole as a DHCP server
+      - "8080:80/tcp" # Maps Pi-hole admin dashboard to 8080 to avoid host port conflicts
+    environment:
+      TZ: 'Europe/Oslo'
+      WEBPASSWORD: ${PIHOLE_ADMIN_PASSWORD} # Managed securely in Portainer UI
+      FTLCONF_LOCAL_IPV4: ${HOST_IP}        # Your Docker host's physical IP
+    volumes:
+      - pihole_config:/etc/pihole
+      - dnsmasq_config:/etc/dnsmasq.d
+
+volumes:
+  pihole_config:
+  dnsmasq_config:
