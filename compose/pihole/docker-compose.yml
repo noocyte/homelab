@@ -12,14 +12,12 @@ services:
       - "8080:80/tcp"
     environment:
       TZ: 'Europe/Oslo'
-      WEBPASSWORD: ${PIHOLE_ADMIN_PASSWORD}
+      # The correct native v6 password variable
+      FTLCONF_webserver_api_password: ${PIHOLE_ADMIN_PASSWORD}
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
-      # 1. Mount your text list where the script expects it
       - ./adlists.list:/etc/pihole/adlists.list:ro
-      # 2. Mount the script into Pi-hole's native startup initialization folder
-      - ./import-lists.sh:/container-custom-init.d/10-import-lists.sh:ro
 
 volumes:
   pihole_config:
