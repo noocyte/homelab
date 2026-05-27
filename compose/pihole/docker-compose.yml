@@ -11,7 +11,6 @@ services:
     environment:
       TZ: 'Europe/Oslo'
       WEBPASSWORD: ${PIHOLE_ADMIN_PASSWORD}
-      FTLCONF_LOCAL_IPV4: ${HOST_IP}
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
