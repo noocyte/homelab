@@ -8,29 +8,24 @@
       community.proxmox.proxmox_kvm:
         api_host: "{{ pve_api_host }}"
         api_user: "{{ pve_api_user }}"
-        # Secret pulled directly from your local terminal environment
         api_password: "{{ lookup('ansible.builtin.env', 'PVE_PASSWORD') }}"
         node: "{{ pve_node }}"
         vmid: "{{ vm_id }}"
         name: "{{ vm_name }}"
         
-        # Hardware Specs driven by vars.yml
         cores: "{{ vm_cores }}"
         memory: "{{ vm_memory }}"
         scsihw: "{{ vm_scsi_hardware }}"
         
-        # Network configuration
         netif:
           net0: "virtio,bridge={{ vm_network_bridge }}"
         
-        # Disk layout configuration
         disk:
           - size: "{{ vm_disk_size }}"
             type: "{{ vm_disk_type }}"
             storage: "{{ target_storage }}"
             import_from: "{{ vm_os_image }}"
             
-        # Cloud-Init provisioning
         sshkeys: "{{ vm_ssh_public_key }}"
         ipconfig:
           ipconfig0: "ip=dhcp"
