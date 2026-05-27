@@ -3,19 +3,33 @@ services:
     container_name: pihole
     image: pihole/pihole:latest
     restart: unless-stopped
-    # Pour the host's networking ports directly into the container
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-      - "67:67/udp"   # Only required if you intend to use Pi-hole as a DHCP server
-      - "8080:80/tcp" # Maps Pi-hole admin dashboard to 8080 to avoid host port conflicts
+      - "67:67/udp"
+      - "8080:80/tcp"
     environment:
       TZ: 'Europe/Oslo'
-      WEBPASSWORD: ${PIHOLE_ADMIN_PASSWORD} # Managed securely in Portainer UI
-      FTLCONF_LOCAL_IPV4: ${HOST_IP}        # Your Docker host's physical IP
+      WEBPASSWORD: ${PIHOLE_ADMIN_PASSWORD}
+      FTLCONF_LOCAL_IPV4: ${HOST_IP}
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
+      # Mount your Git-managed list directly into the container
+      - ./adlists.list:/etc/pihole/adlists.list:ro
+    # This automatically injects the lists into the DB and updates gravity on startup
+    entrypoint: >
+      bash -c "
+      echo 'Importing Git-managed adlists...';
+      if [ -f /etc/pihole/adlists.list ]; then
+        while IFS= read -r line || [ -n \"\$$line\" ]; do
+          [[ \"\$$line\" =~ ^#.* ]] || [ -z \"\$$line\" ] && continue
+          sqlite3 /etc/pihole/pihole-FTL.db \"INSERT OR IGNORE INTO adlist (address, enabled) VALUES ('\$$\$line', 1);\"
+        done < /etc/pihole/adlists.list
+        pihole -g
+      fi;
+      exec /s6-init
+      "
 
 volumes:
   pihole_config:
