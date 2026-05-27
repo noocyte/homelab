@@ -1,0 +1,58 @@
+---
+- name: Bootstrap Core Docker and Portainer Host
+  hosts: my_docker_servers
+  become: true
+  gather_facts: true
+
+  handlers:
+    - name: Restart systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: restarted
+
+  tasks:
+    - name: Pre-check | Determine if systemd-resolved config file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/resolved.conf
+      register: resolved_config
+
+    - name: Network Prep | Disable systemd-resolved stub listener to free up port 53
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNSStubListener='
+        line: 'DNSStubListener=no'
+      when: resolved_config.stat.exists
+      notify: Restart systemd-resolved
+
+    - name: System Prep | Force handlers to run immediately to clear port 53
+      ansible.builtin.meta: flush_handlers
+
+    - name: Prerequisite Prep | Install system packages
+      ansible.builtin.package:
+        name:
+          - ca-certificates
+          - curl
+          - python3-pip
+        state: present
+
+    - name: Engine Install | Install Docker Engine components
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+
+    - name: Directory Prep | Setup Portainer storage host location
+      ansible.builtin.file:
+        path: /opt/portainer
+        state: directory
+        mode: '0755'
+
+    - name: Management Plane | Deploy Portainer Server Container
+      community.docker.docker_container:
+        name: portainer
+        image: "{{ portainer_image }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "{{ portainer_web_port }}:9443"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+          - portainer_data:/data

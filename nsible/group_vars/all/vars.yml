@@ -1,6 +1,0 @@
----
-# Versioning tracking values
-portainer_image: "portainer/portainer-ce:lts"
-
-# Port mappings
-portainer_web_port: "9443"
