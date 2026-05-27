@@ -19,7 +19,7 @@ services:
       # 1. Mount your text list where the script expects it
       - ./adlists.list:/etc/pihole/adlists.list:ro
       # 2. Mount the script into Pi-hole's native startup initialization folder
-      - ./import-lists.sh:/etc/cont-init.d/10-import-lists.sh:ro
+      - ./import-lists.sh:/container-custom-init.d/10-import-lists.sh:ro
 
 volumes:
   pihole_config:
