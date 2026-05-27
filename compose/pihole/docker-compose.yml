@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   pihole:
     container_name: pihole
@@ -14,20 +16,10 @@ services:
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
-      # Mount your Git-managed list directly into the container
+      # 1. Mount your text list where the script expects it
       - ./adlists.list:/etc/pihole/adlists.list:ro
-    entrypoint: >
-      bash -c "
-      echo 'Importing Git-managed adlists...';
-      if [ -f /etc/pihole/adlists.list ]; then
-        while IFS= read -r line || [ -n \"\$$line\" ]; do
-          [[ \"\$$line\" =~ ^#.* ]] || [ -z \"\$$line\" ] && continue
-          sqlite3 /etc/pihole/pihole-FTL.db \"INSERT OR IGNORE INTO adlist (address, enabled) VALUES ('\$$\$line', 1);\"
-        done < /etc/pihole/adlists.list
-        pihole -g
-      fi;
-      exec /init
-      "
+      # 2. Mount the script into Pi-hole's native startup initialization folder
+      - ./import-lists.sh:/etc/cont-init.d/10-import-lists.sh:ro
 
 volumes:
   pihole_config:
