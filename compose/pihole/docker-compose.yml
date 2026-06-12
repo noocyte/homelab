@@ -17,7 +17,6 @@ services:
     volumes:
       - pihole_config:/etc/pihole
       - dnsmasq_config:/etc/dnsmasq.d
-      - ./adlists.list:/etc/pihole/adlists.list:ro
 
 volumes:
   pihole_config:

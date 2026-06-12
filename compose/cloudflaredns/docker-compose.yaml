@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    # Use :latest for updates, or pin e.g. :1 for stability if you prefer no breaking changes
+    container_name: cloudflare-ddns
+    network_mode: host
+    # Strongly recommended for reliable IPv6 detection and to avoid NAT issues
+    restart: unless-stopped
+    # Or 'always' if you prefer
+    read_only: true
+    # Good security practice
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      # REQUIRED: Create token with:
+      # - Zone - DNS - Edit (for the domain)
+      # - Account - Account Filter Lists - Edit (for the IP list / former WAF list)
+      # Scope to specific zone if possible; use "Edit zone DNS" template + add Account Filter Lists permission
+
+      - DOMAINS=minecraft.torvmyrvegen20.net
+      # Comma-separate if more: e.g. minecraft.torvmyrvegen20.net,home.example.com
+      # Updates A (IPv4) and AAAA (IPv6) records automatically
+
+      - PROXIED=false
+      # Set to true if you want Cloudflare proxy (orange cloud) enabled on this record
+      # Usually false for Minecraft/server ports that aren't HTTP/S
+
+      - WAF_LISTS=4f02188557b4bf21d237feb6eaf4a940/homeips
+      # Format: <account-id>/<exact-list-name-you-created-in-Zero-Trust>
+      # Example: 0123456789abcdef0123456789abcdef/home-dynamic-ips
+      # The container will:
+      # - Create the list if missing
+      # - Replace contents with only your current public IP(s)
+      # - Remove old/unmanaged IPs
+      # Find your Account ID: Zero Trust dashboard URL → /<account_id>/... or via API
+
+      # Optional tweaks (uncomment if needed):
+      # - IP6_PROVIDER=none          # Disable IPv6 entirely if you don't have/use it
+      - TZ=Europe/Oslo             # Set your timezone for log timestamps
+      # - LOG_LEVEL=info             # Or debug/warn etc. for more/less output
+
+    # Optional: Add healthcheck if your orchestrator supports it (experimental in some versions)
+    # healthcheck:
+    #   test: ["CMD", "wget", "--spider", "-q", "localhost/health"]  # If health endpoint exists in future
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
