@@ -4,10 +4,19 @@
   gather_facts: false
 
   tasks:
+    - name: Check if VM 800 already exists
+      ansible.builtin.command: >
+        ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+        "ls /etc/pve/qemu-server/{{ vm_id }}.conf"
+      register: vm_check
+      failed_when: false
+      changed_when: false
+
     - name: Clone VM from Golden Cloud-Init Template via SSH
       ansible.builtin.command: >
         ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }}
         "qm clone {{ vm_template_source }} {{ vm_id }} --name {{ vm_name }} --full true --storage {{ target_storage }}"
+      when: vm_check.rc != 0
       changed_when: true
 
     - name: Configure Hardware Specs and Cloud-Init Overrides
@@ -23,6 +32,8 @@
         cores: "{{ vm_cores }}"
         memory: "{{ vm_memory }}"
 
+        agent: 1
+
         # Cloud-Init Inject (SSH Key & DHCP)
         sshkeys: "{{ vm_ssh_public_key }}"
         ipconfig:
@@ -30,6 +41,12 @@
 
         update: true
         state: present
+
+    - name: Storage Setup | Resize Virtual Machine Disk
+      ansible.builtin.command: >
+        ssh -o StrictHostKeyChecking=no root@{{ pve_api_host }}
+        "qm resize {{ vm_id }} {{ vm_disk_type }}0 {{ vm_disk_size }}"
+      changed_when: true
 
     - name: Start the Virtual Machine
       community.proxmox.proxmox_kvm:

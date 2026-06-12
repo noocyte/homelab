@@ -19,8 +19,11 @@ SSH into your Proxmox server (or open the Shell via the Proxmox Web UI) and run:
 ### 2. Local Control Node Setup
 Before running the Proxmox automation, ensure your local development machine has the required Proxmox API Python packages injected into your Ansible environment:
 
-    pipx inject ansible requests proxmoxer
+    brew install ansible
+    ansible-galaxy role install geerlingguy.docker
     ansible-galaxy collection install community.proxmox
+    ansible-galaxy collection install community.docker
+    ansible-galaxy collection install community.general
 
 ### 3. Execution Runbook
 To build and start the VM, execute the playbook while safely passing your Proxmox root password into your terminal environment memory (keeping it entirely out of Git):
@@ -39,14 +42,14 @@ Once your VM is spun up and attached to your local network, 'ansible/bootstrap.y
 Open 'ansible/inventory.ini' and update the IP address to match the network IP allocated to your brand-new VM:
 
     [my_docker_servers]
-    192.168.1.50 ansible_user=debian
+    192.168.0.59 ansible_user=debian
 
 *(Note: Official Debian Cloud images utilize 'debian' as the default administrative user profile instead of 'root').*
 
 ### 2. Execution Runbook
 Run the bootstrap script to lay down Docker and spin up Portainer:
 
-    ansible-playbook bootstrap.yml
+    ansible-playbook -i ansible/inventory.ini ansible/bootstrap.yml --private-key=~/.ssh/id_ed25519
 
 Once completed, navigate to 'https://<YOUR-VM-IP>:9443' to access Portainer.
 

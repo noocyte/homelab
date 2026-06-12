@@ -19,13 +19,25 @@
     - name: Network Prep | Disable systemd-resolved stub listener to free up port 53
       ansible.builtin.lineinfile:
         path: /etc/systemd/resolved.conf
-        regexp: '^#?DNSStubListener='
-        line: 'DNSStubListener=no'
+        regexp: "^#?DNSStubListener="
+        line: "DNSStubListener=no"
       when: resolved_config.stat.exists
       notify: Restart systemd-resolved
 
     - name: System Prep | Force handlers to run immediately to clear port 53
       ansible.builtin.meta: flush_handlers
+
+    - name: Storage Setup | Expand Partition to Fill Disk
+      ansible.builtin.command: growpart /dev/sda 1
+      register: growpart_result
+      failed_when: growpart_result.rc not in [0, 1]
+      changed_when: growpart_result.rc == 0
+
+    - name: Storage Setup | Resize Filesystem to Match Partition
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/sda1
+        resizefs: true
 
     - name: Prerequisite Prep | Install system packages
       ansible.builtin.package:
@@ -33,7 +45,14 @@
           - ca-certificates
           - curl
           - python3-pip
+          - qemu-guest-agent
         state: present
+
+    - name: Prerequisite Prep | Ensure QEMU Guest Agent is active
+      ansible.builtin.systemd:
+        name: qemu-guest-agent
+        state: started
+        enabled: yes
 
     - name: Engine Install | Install Docker Engine components
       ansible.builtin.include_role:
@@ -43,7 +62,7 @@
       ansible.builtin.file:
         path: /opt/portainer
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Management Plane | Deploy Portainer Server Container
       community.docker.docker_container:
