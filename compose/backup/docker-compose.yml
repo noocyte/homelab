@@ -1,0 +1,25 @@
+services:
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: backup-scheduler
+    command: daemon --docker
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  rclone-backup:
+    image: rclone/rclone:latest
+    container_name: rclone-backup
+    entrypoint: ["sleep", "infinity"]   # idle; Ofelia execs the job in
+    restart: unless-stopped
+    environment:
+      - RCLONE_CONFIG=/config/rclone.conf
+    volumes:
+      - /srv/rclone:/config                  # rclone.conf — RW on purpose (see note)
+      - /mnt/immich:/sources/immich:ro        # Immich data, read-only
+      - /srv/backups:/sources/dumps:ro        # future DB dumps, read-only
+      - ./backup.sh:/backup.sh:ro             # script from this repo folder
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.nightly.schedule: "0 0 3 * * *"   # 03:00 daily
+      ofelia.job-exec.nightly.command: "sh /backup.sh"
