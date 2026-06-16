@@ -1,0 +1,108 @@
+services:
+  teslamate:
+    image: teslamate/teslamate:latest
+    restart: always
+    environment:
+      - ENCRYPTION_KEY=${TESLAMATE_ENCRYPTION_KEY}
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=${TESLAMATE_DB_PASS}
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - MQTT_HOST=mosquitto
+    ports:
+      - 4000:4000
+    volumes:
+      - ./import:/opt/app/import
+    cap_drop:
+      - all
+
+  teslamateagile:
+    image: mattjeanes/teslamateagile:latest
+    restart: always
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=${TESLAMATE_DB_PASS}
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - TeslaMate__UpdateIntervalSeconds=300
+      - TeslaMate__GeofenceId=1
+      - TeslaMate__EnergyProvider=Tibber
+      - Tibber__AccessToken=${TESLAMATE_TIBBER_TOKEN}
+      - TeslaMate__FeePerKilowattHour=0.40
+
+  database:
+    image: postgres:17
+    restart: always
+    environment:
+      - POSTGRES_USER=teslamate
+      - POSTGRES_PASSWORD=${TESLAMATE_DB_PASS}
+      - POSTGRES_DB=teslamate
+    volumes:
+      - teslamate-db:/var/lib/postgresql/data
+
+  grafana:
+    image: teslamate/grafana:latest
+    restart: always
+    environment:
+      - DATABASE_USER=teslamate
+      - DATABASE_PASS=${TESLAMATE_DB_PASS}
+      - DATABASE_NAME=teslamate
+      - DATABASE_HOST=database
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel
+    ports:
+      - 3000:3000
+    volumes:
+      - teslamate-grafana-data:/var/lib/grafana
+      - ~/Teslamate-CustomGrafanaDashboards/customdashboards.yml:/etc/grafana/provisioning/dashboards/customdashboards.yml
+      - ~/Teslamate-CustomGrafanaDashboards/dashboards:/TeslamateCustomDashboards
+
+  ABRP:
+    container_name: TeslaMate_ABRP
+    image: fetzu/teslamate-abrp:latest
+    restart: always
+    depends_on:
+      - database
+      - mosquitto
+    environment:
+      - MQTT_SERVER=mosquitto
+      - USER_TOKEN=${TESLAMATE_ABRP_TOKEN}
+      - CAR_NUMBER=2
+
+  mosquitto:
+    image: eclipse-mosquitto:1.6
+    restart: always
+    ports:
+      - 1883:1883
+    volumes:
+      - mosquitto-conf:/mosquitto/config
+      - mosquitto-data:/mosquitto/data
+
+ saic2postgresql:
+    image: noocyte/saic2postgresql:latest
+    container_name: saic2postgresql
+    restart: unless-stopped
+    depends_on:
+      - mosquitto
+      - osrm
+      - database
+    environment:
+      - MQTT_BROKER=tcp://mosquitto:1883
+      - MQTT_TOPIC_PREFIX=${TESLAMATE_SAIC_TOPIC_PREFIX}
+      - DB_URI=${TESLAMATE_SAIC_DB_URI}
+      - DRIVE_END_DEBOUNCE_SECONDS=180
+      - OSRM_URL=http://osrm:5000
+
+  osrm:
+    image: osrm/osrm-backend
+    restart: unless-stopped
+    volumes:
+      - ./osrm-data:/data
+    command: osrm-routed --algorithm mld /data/norway-latest.osrm
+    ports:
+      - "5000:5000" 
+
+volumes:
+  teslamate-db:
+  teslamate-grafana-data:
+  mosquitto-conf:
+  mosquitto-data:
