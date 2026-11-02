@@ -36,4 +36,13 @@ if [ -d /sources/dumps ] && [ -n "$(ls -A /sources/dumps 2>/dev/null)" ]; then
     --log-level INFO
 fi
 
+# TeslaMate dumps (written to ZFS at 02:30). Mirror only: retention is
+# handled by dump.sh (14 days), so no --backup-dir archive here.
+if [ -n "$(ls -A /sources/teslamate 2>/dev/null)" ]; then
+  log "syncing teslamate dumps"
+  rclone sync /sources/teslamate jottacrypt:teslamate \
+    --include '*.dump' \
+    --log-level INFO
+fi
+
 log "done"

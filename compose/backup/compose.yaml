@@ -3,7 +3,8 @@
 # Host paths:
 #   /srv/rclone/rclone.conf   rclone config incl. crypt password (restore from password manager)
 #   /mnt/immich               Immich library (virtiofs, read-only)
-#   /srv/backups              DB dumps etc. (Komodo DB backups, later TeslaMate dumps - see #6)
+#   /srv/backups              DB dumps etc. (Komodo DB backups)
+#   /mnt/bigbackup/teslamate  TeslaMate pg_dumps (written 02:30 by the teslamate stack)
 #
 # backup.sh is mounted via its folder: Komodo clones this repo onto the host
 # under /etc/komodo/stacks/, so ./backup.sh exists on the host.
@@ -31,6 +32,7 @@ services:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
       - /srv/backups:/sources/dumps:ro
+      - /mnt/bigbackup/teslamate:/sources/teslamate:ro   # TeslaMate dumps on ZFS
       # Folder, not single file: a single-file bind mount keeps pointing at the
       # old file after git pull replaces it.
       - .:/scripts:ro

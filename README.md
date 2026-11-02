@@ -145,6 +145,23 @@ Stored as Komodo Variables (secret), used in `komodo/sync/stacks.toml` as
 Not in Komodo: `secrets/komodo.env` (Komodo's own DB/admin/JWT secrets,
 embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 
+## Backups
+
+| What | When | Where | Kept |
+|---|---|---|---|
+| TeslaMate DBs (`teslamate`, `mg_ismart`), `pg_dump -Fc` | 02:30 (UTC in file names) | ZFS: `/storage/shares/backups/teslamate` (VM: `/mnt/bigbackup/teslamate`) | 14 days |
+| ↳ same files, encrypted | 03:00 | Jottacloud `jottacrypt:teslamate` | mirror of the above |
+| Immich library + DB backups | 03:00 | Jottacloud `jottacrypt:immich` | changed/deleted files kept in `archive/<date>` |
+| Komodo DB | Komodo's own backup procedure | `/srv/backups/komodo` → Jottacloud `jottacrypt:dumps` | |
+
+Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
+the containers. The TeslaMate dump refuses to run if the ZFS share isn't
+mounted.
+
+**Restore TeslaMate** (tested 2026-11-02): start an empty `postgres:17`,
+`createdb mg_ismart`, then `pg_restore -d teslamate <dump>` and
+`pg_restore -d mg_ismart <dump>`.
+
 ## Ports on 192.168.0.240
 
 | Port | App |
@@ -163,6 +180,8 @@ embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 
 The database is the valuable part. The data is copied, never moved: serverlite
 stays untouched until the new instance is verified.
+
+*Done 2026-11-02.* Kept for reference:
 
 1. On serverlite: stop everything except the database
    (`docker compose stop teslamate teslamateagile abrp saic2postgresql grafana`).

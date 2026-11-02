@@ -19,6 +19,7 @@
 #   /srv/teslamate/import              TeslaFi import folder
 #   /srv/teslamate/osrm-data           preprocessed Norway map (see osrm-setup.sh)
 #   /srv/teslamate/custom-dashboards   git clone of jheredianet/Teslamate-CustomGrafanaDashboards
+#   /mnt/bigbackup/teslamate           nightly pg_dumps (ZFS, 14 days) - see dump.sh
 
 services:
   teslamate:
@@ -62,6 +63,13 @@ services:
       - POSTGRES_DB=teslamate
     volumes:
       - /srv/teslamate/postgres:/var/lib/postgresql/data
+      - /mnt/bigbackup/teslamate:/backups      # ZFS share (NFS)
+      - .:/scripts:ro                          # dump.sh
+    labels:
+      # Nightly dump to ZFS at 02:30; the backup stack ships it offsite at 03:00.
+      ofelia.enabled: "true"
+      ofelia.job-exec.teslamate-dump.schedule: "0 30 2 * * *"
+      ofelia.job-exec.teslamate-dump.command: "sh /scripts/dump.sh"
 
   grafana:
     image: teslamate/grafana:4.4.0
