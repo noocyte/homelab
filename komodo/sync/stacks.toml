@@ -70,7 +70,7 @@ run_directory = "compose/trip-planner"
 
 [[stack]]
 name = "weatherrouter"
-deploy = false   # true once ROUTER_* secrets are in Komodo
+deploy = true
 tags = ["apps"]
 [stack.config]
 server = "docker-host"
