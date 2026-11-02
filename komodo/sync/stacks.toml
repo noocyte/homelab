@@ -47,7 +47,7 @@ CLOUDFLARE_API_TOKEN = [[CLOUDFLARE_API_TOKEN]]
 
 [[stack]]
 name = "cloudflared"
-deploy = true
+deploy = false   # true at switchover: two tunnel connectors would split traffic with serverlite
 tags = ["infra"]
 [stack.config]
 server = "docker-host"
@@ -70,7 +70,7 @@ run_directory = "compose/trip-planner"
 
 [[stack]]
 name = "weatherrouter"
-deploy = true
+deploy = false   # true once ROUTER_* secrets are in Komodo
 tags = ["apps"]
 [stack.config]
 server = "docker-host"
@@ -87,7 +87,7 @@ ROUTER_DATEX_PASSWORD = [[ROUTER_DATEX_PASSWORD]]
 
 [[stack]]
 name = "crafty"
-deploy = true
+deploy = false   # true after /srv/crafty is migrated from serverlite
 tags = ["apps"]
 [stack.config]
 server = "docker-host"
