@@ -1,0 +1,71 @@
+# Komodo: Core (web UI + API), Periphery (agent) and its database.
+# Based on upstream compose/ferretdb.compose.yaml (Komodo v2).
+#
+# NOT deployed by Komodo itself: the VM starts this via komodo.service
+# (see flatcar/docker-host.bu). Secrets come from /etc/komodo/compose.env.
+
+services:
+  postgres:
+    image: ghcr.io/ferretdb/postgres-documentdb:17-0.107.0-ferretdb-2.7.0
+    labels:
+      komodo.skip: # Prevent Komodo from stopping its own DB
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${KOMODO_DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${KOMODO_DATABASE_PASSWORD}
+      POSTGRES_DB: postgres
+
+  ferretdb:
+    image: ghcr.io/ferretdb/ferretdb:2.7.0
+    labels:
+      komodo.skip:
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    volumes:
+      - ferretdb-state:/state
+    environment:
+      FERRETDB_POSTGRESQL_URL: postgres://${KOMODO_DATABASE_USERNAME}:${KOMODO_DATABASE_PASSWORD}@postgres:5432/postgres
+
+  core:
+    image: ghcr.io/moghtech/komodo-core:2.3.4
+    labels:
+      komodo.skip:
+    init: true
+    restart: unless-stopped
+    depends_on:
+      - ferretdb
+    ports:
+      - 9120:9120
+    env_file: ./compose.env
+    environment:
+      KOMODO_DATABASE_ADDRESS: ferretdb:27017
+    volumes:
+      - keys:/config/keys
+      # Dated DB backups land here; the backup stack ships /srv/backups offsite.
+      - /srv/backups/komodo:/backups
+
+  periphery:
+    image: ghcr.io/moghtech/komodo-periphery:2.3.4
+    labels:
+      komodo.skip:
+    init: true
+    restart: unless-stopped
+    depends_on:
+      - core
+    env_file: ./compose.env
+    volumes:
+      - keys:/config/keys
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc
+      # Must be identical inside and outside the container.
+      - /etc/komodo:/etc/komodo
+      # App data, so pre/post-deploy commands can prepare folders in /srv.
+      - /srv:/srv
+
+volumes:
+  postgres-data:
+  ferretdb-state:
+  keys:

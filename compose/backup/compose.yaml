@@ -1,0 +1,38 @@
+# Nightly offsite backup (rclone → Jottacloud, encrypted), scheduled by Ofelia.
+#
+# Host paths:
+#   /srv/rclone/rclone.conf   rclone config incl. crypt password (restore from password manager)
+#   /mnt/immich               Immich library (virtiofs, read-only)
+#   /srv/backups              DB dumps etc. (Komodo DB backups, later TeslaMate dumps - see #6)
+#
+# backup.sh is referenced relatively: Komodo clones this repo onto the host
+# under /etc/komodo/stacks/, so ./backup.sh exists on the host.
+
+services:
+  ofelia:
+    image: mcuadros/ofelia:0.3.21
+    container_name: backup-scheduler
+    command: daemon --docker
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Oslo
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  rclone-backup:
+    image: rclone/rclone:1
+    container_name: rclone-backup
+    entrypoint: ["sleep", "infinity"]   # idle; Ofelia execs the job in
+    restart: unless-stopped
+    environment:
+      - RCLONE_CONFIG=/config/rclone.conf
+      - TZ=Europe/Oslo
+    volumes:
+      - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
+      - /mnt/immich:/sources/immich:ro
+      - /srv/backups:/sources/dumps:ro
+      - ./backup.sh:/backup.sh:ro
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.nightly.schedule: "0 0 3 * * *"   # 03:00 daily
+      ofelia.job-exec.nightly.command: "sh /backup.sh"

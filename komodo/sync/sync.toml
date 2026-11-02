@@ -1,0 +1,10 @@
+# The Resource Sync that manages everything in komodo/sync/, including itself.
+# Create it once by hand in the Komodo UI with these exact values (README
+# step 5); from then on it is managed from this file.
+
+[[resource_sync]]
+name = "homelab"
+[resource_sync.config]
+repo = "noocyte/homelab"
+branch = "main"
+resource_path = ["komodo/sync"]

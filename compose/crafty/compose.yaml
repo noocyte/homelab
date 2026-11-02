@@ -1,0 +1,20 @@
+# Crafty Controller (Minecraft server manager). Data: /srv/crafty/*
+# Router port forwards needed: 25500-25600/tcp, 19132/udp → 192.168.0.240
+services:
+  crafty:
+    image: registry.gitlab.com/crafty-controller/crafty-4:4.5.4
+    container_name: crafty_container
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Oslo
+    ports:
+      - "8443:8443"               # Web UI (HTTPS)
+      - "8123:8123"               # Dynmap
+      - "19132:19132/udp"         # Bedrock
+      - "25500-25600:25500-25600" # Minecraft server port range
+    volumes:
+      - /srv/crafty/backups:/crafty/backups
+      - /srv/crafty/logs:/crafty/logs
+      - /srv/crafty/servers:/crafty/servers
+      - /srv/crafty/config:/crafty/app/config
+      - /srv/crafty/import:/crafty/import

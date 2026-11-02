@@ -1,8 +1,6 @@
-# Ignore local Ansible execution traces and custom configurations
-*.retry
-.ansible_vault_pass
-
-# Ignore local environment test files inside application configurations
+# Secrets and generated files: never commit
+secrets/
+build/
 **/.env
 **/local_secret_*
 

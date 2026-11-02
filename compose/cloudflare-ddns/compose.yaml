@@ -1,0 +1,24 @@
+# Keeps Cloudflare DNS (and the "homeips" IP list) pointed at our public IP.
+#
+# Secret (Komodo): CLOUDFLARE_API_TOKEN
+#   Token permissions: Zone - DNS - Edit (torvmyrvegen20.net)
+#                      Account - Account Filter Lists - Edit
+
+services:
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:1
+    container_name: cloudflare-ddns
+    network_mode: host        # reliable IPv6 detection
+    restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - DOMAINS=minecraft.torvmyrvegen20.net
+      - PROXIED=false
+      # <account-id>/<list-name> in Cloudflare Zero Trust
+      - WAF_LISTS=4f02188557b4bf21d237feb6eaf4a940/homeips
+      - TZ=Europe/Oslo
