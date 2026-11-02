@@ -1,0 +1,16 @@
+# Cloudflare Tunnel (replaces the systemd cloudflared on serverlite).
+# Routes are configured in the Cloudflare dashboard (Zero Trust → Networks →
+# Tunnels). Host networking means routes like http://localhost:3000 reach
+# services published on this VM.
+#
+# Secret (Komodo): CLOUDFLARE_TUNNEL_TOKEN
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    container_name: cloudflared
+    restart: unless-stopped
+    network_mode: host
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}

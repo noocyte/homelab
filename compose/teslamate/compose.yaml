@@ -1,6 +1,28 @@
+# TeslaMate + friends. VALUABLE DATA: Postgres in /srv/teslamate/postgres
+# (databases: teslamate, mg_ismart).
+#
+# Versions are pinned to what ran on serverlite at migration time, so the
+# restored database matches the app. Upgrade deliberately, after a backup.
+#
+# Secrets (Komodo):
+#   TESLAMATE_ENCRYPTION_KEY   MUST be the old key, or stored Tesla tokens can't be decrypted
+#   TESLAMATE_DB_PASS
+#   TESLAMATE_TIBBER_TOKEN
+#   TESLAMATE_ABRP_TOKEN
+#   TESLAMATE_SAIC_TOPIC_PREFIX
+#   TESLAMATE_SAIC_DB_URI
+#
+# Host paths:
+#   /srv/teslamate/postgres            database
+#   /srv/teslamate/grafana             grafana state
+#   /srv/teslamate/mosquitto/{config,data}
+#   /srv/teslamate/import              TeslaFi import folder
+#   /srv/teslamate/osrm-data           preprocessed Norway map (see osrm-setup.sh)
+#   /srv/teslamate/custom-dashboards   git clone of jheredianet/Teslamate-CustomGrafanaDashboards
+
 services:
   teslamate:
-    image: teslamate/teslamate:latest
+    image: teslamate/teslamate:4.4.0
     restart: always
     environment:
       - ENCRYPTION_KEY=${TESLAMATE_ENCRYPTION_KEY}
@@ -9,15 +31,16 @@ services:
       - DATABASE_NAME=teslamate
       - DATABASE_HOST=database
       - MQTT_HOST=mosquitto
+      - TZ=Europe/Oslo
     ports:
       - 4000:4000
     volumes:
-      - ./import:/opt/app/import
+      - /srv/teslamate/import:/opt/app/import
     cap_drop:
       - all
 
   teslamateagile:
-    image: mattjeanes/teslamateagile:latest
+    image: mattjeanes/teslamateagile@sha256:78becfffcafecadf54b75046d325d755c953efec69ac2df6320ebd96f901ae2e
     restart: always
     environment:
       - DATABASE_USER=teslamate
@@ -38,10 +61,10 @@ services:
       - POSTGRES_PASSWORD=${TESLAMATE_DB_PASS}
       - POSTGRES_DB=teslamate
     volumes:
-      - teslamate-db:/var/lib/postgresql/data
+      - /srv/teslamate/postgres:/var/lib/postgresql/data
 
   grafana:
-    image: teslamate/grafana:latest
+    image: teslamate/grafana:4.4.0
     restart: always
     environment:
       - DATABASE_USER=teslamate
@@ -52,13 +75,13 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - teslamate-grafana-data:/var/lib/grafana
-      - ~/Teslamate-CustomGrafanaDashboards/customdashboards.yml:/etc/grafana/provisioning/dashboards/customdashboards.yml
-      - ~/Teslamate-CustomGrafanaDashboards/dashboards:/TeslamateCustomDashboards
+      - /srv/teslamate/grafana:/var/lib/grafana
+      - /srv/teslamate/custom-dashboards/customdashboards.yml:/etc/grafana/provisioning/dashboards/customdashboards.yml:ro
+      - /srv/teslamate/custom-dashboards/dashboards:/TeslamateCustomDashboards:ro
 
-  ABRP:
+  abrp:
     container_name: TeslaMate_ABRP
-    image: fetzu/teslamate-abrp:latest
+    image: fetzu/teslamate-abrp:4.0.2
     restart: always
     depends_on:
       - database
@@ -74,10 +97,10 @@ services:
     ports:
       - 1883:1883
     volumes:
-      - mosquitto-conf:/mosquitto/config
-      - mosquitto-data:/mosquitto/data
+      - /srv/teslamate/mosquitto/config:/mosquitto/config
+      - /srv/teslamate/mosquitto/data:/mosquitto/data
 
- saic2postgresql:
+  saic2postgresql:
     image: noocyte/saic2postgresql:latest
     container_name: saic2postgresql
     restart: unless-stopped
@@ -93,16 +116,11 @@ services:
       - OSRM_URL=http://osrm:5000
 
   osrm:
-    image: osrm/osrm-backend
+    # Pinned by digest: the preprocessed map data must match the OSRM version.
+    image: osrm/osrm-backend@sha256:af5d4a83fb90086a43b1ae2ca22872e6768766ad5fcbb07a29ff90ec644ee409
     restart: unless-stopped
     volumes:
-      - ./osrm-data:/data
+      - /srv/teslamate/osrm-data:/data
     command: osrm-routed --algorithm mld /data/norway-latest.osrm
     ports:
-      - "5000:5000" 
-
-volumes:
-  teslamate-db:
-  teslamate-grafana-data:
-  mosquitto-conf:
-  mosquitto-data:
+      - "5000:5000"

@@ -1,0 +1,116 @@
+# Komodo Stacks: one per folder in compose/.
+#
+# Secrets are Komodo Variables marked "secret" (Settings → Variables), and are
+# interpolated with [[NAME]]. They are never stored in git. The full list is
+# in README.md → "Secrets".
+#
+# deploy = true  → the sync deploys the stack if it isn't running or its
+#                  config changed. TeslaMate is false until its DB is restored.
+
+[[stack]]
+name = "backup"
+deploy = true
+tags = ["infra"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/backup"
+
+[[stack]]
+name = "pihole"
+deploy = true
+tags = ["infra"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/pihole"
+environment = """
+PIHOLE_ADMIN_PASSWORD = [[PIHOLE_ADMIN_PASSWORD]]
+"""
+post_deploy.path = "."
+post_deploy.command = "sh lists.sh"
+
+[[stack]]
+name = "cloudflare-ddns"
+deploy = true
+tags = ["infra"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/cloudflare-ddns"
+environment = """
+CLOUDFLARE_API_TOKEN = [[CLOUDFLARE_API_TOKEN]]
+"""
+
+[[stack]]
+name = "cloudflared"
+deploy = true
+tags = ["infra"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/cloudflared"
+environment = """
+CLOUDFLARE_TUNNEL_TOKEN = [[CLOUDFLARE_TUNNEL_TOKEN]]
+"""
+
+[[stack]]
+name = "trip-planner"
+deploy = true
+tags = ["apps"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/trip-planner"
+
+[[stack]]
+name = "weatherrouter"
+deploy = true
+tags = ["apps"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/weatherrouter"
+# Own image published as :latest - redeploy automatically when it changes.
+auto_update = true
+environment = """
+ROUTER_GOOGLE_API_KEY = [[ROUTER_GOOGLE_API_KEY]]
+ROUTER_DATEX_USERNAME = [[ROUTER_DATEX_USERNAME]]
+ROUTER_DATEX_PASSWORD = [[ROUTER_DATEX_PASSWORD]]
+"""
+
+[[stack]]
+name = "crafty"
+deploy = true
+tags = ["apps"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/crafty"
+
+[[stack]]
+name = "teslamate"
+deploy = false   # flip to true after the DB is migrated (see README)
+tags = ["apps"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/teslamate"
+pre_deploy.path = "."
+pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"
+environment = """
+TESLAMATE_ENCRYPTION_KEY = [[TESLAMATE_ENCRYPTION_KEY]]
+TESLAMATE_DB_PASS = [[TESLAMATE_DB_PASS]]
+TESLAMATE_TIBBER_TOKEN = [[TESLAMATE_TIBBER_TOKEN]]
+TESLAMATE_ABRP_TOKEN = [[TESLAMATE_ABRP_TOKEN]]
+TESLAMATE_SAIC_TOPIC_PREFIX = [[TESLAMATE_SAIC_TOPIC_PREFIX]]
+TESLAMATE_SAIC_DB_URI = [[TESLAMATE_SAIC_DB_URI]]
+"""

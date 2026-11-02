@@ -1,0 +1,28 @@
+# Pi-hole: network-wide DNS + ad blocking. DNS only (DHCP stays in UniFi).
+#
+# All settings are declared here as FTLCONF_* variables (Pi-hole v6), so a
+# rebuild gives the same config. Blocklists / allow-lists live in lists.sh,
+# which Komodo runs after each deploy.
+#
+# Secret (Komodo): PIHOLE_ADMIN_PASSWORD
+
+services:
+  pihole:
+    image: pihole/pihole:2026.10.1
+    container_name: pihole
+    restart: unless-stopped
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8080:80/tcp"
+    environment:
+      TZ: Europe/Oslo
+      FTLCONF_webserver_api_password: ${PIHOLE_ADMIN_PASSWORD}
+      # Answer queries from the LAN (default only answers "local" subnets,
+      # which under Docker's bridge network means the container network).
+      FTLCONF_dns_listeningMode: ALL
+      FTLCONF_dns_upstreams: "1.1.1.3;2606:4700:4700::1111;2606:4700:4700::1001"
+      FTLCONF_dns_domain_name: home.lan
+      FTLCONF_dns_hosts: "192.168.0.240 docker-host.home.lan;192.168.0.107 proxmox.home.lan;192.168.0.63 ha.home.lan;192.168.0.65 nas.home.lan;192.168.0.220 smb.home.lan"
+    volumes:
+      - /srv/pihole/etc-pihole:/etc/pihole

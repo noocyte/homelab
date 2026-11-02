@@ -1,0 +1,10 @@
+# TRIP - trip planner. Data: /srv/trip-planner/storage (sqlite + attachments)
+services:
+  app:
+    image: ghcr.io/itskovacs/trip:1
+    restart: unless-stopped
+    ports:
+      - 8300:8000
+    volumes:
+      - /srv/trip-planner/storage:/app/storage
+    command: ["fastapi", "run", "/app/trip/main.py", "--host", "0.0.0.0"]

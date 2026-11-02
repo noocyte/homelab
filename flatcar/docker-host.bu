@@ -1,0 +1,143 @@
+# Butane config for the Flatcar "docker-host" VM on Proxmox.
+#
+# This file defines the WHOLE operating system configuration of the VM:
+# user + SSH key, mounts, Docker, and Komodo (which then deploys everything
+# else from this repo). Ignition applies it once, on first boot.
+#
+# Build the Ignition file with:  scripts/build-ignition.sh
+# Spec: https://coreos.github.io/butane/config-flatcar-v1_1/
+
+variant: flatcar
+version: 1.1.0
+
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPCkWXW54OuMCISwdaPme9cBQloqoyvVwj4vOL8y6gAv jarle@famnygaard.com
+
+storage:
+  directories:
+    - path: /etc/komodo
+      mode: 0755
+    - path: /srv
+      mode: 0755
+    - path: /srv/backups
+      mode: 0755
+    - path: /srv/backups/komodo
+      mode: 0755
+    - path: /srv/rclone
+      mode: 0700
+
+  files:
+    - path: /etc/hostname
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: docker-host
+
+    # Free port 53 for Pi-hole (resolved's stub listener binds 127.0.0.53:53).
+    - path: /etc/systemd/resolved.conf.d/10-no-stub.conf
+      mode: 0644
+      contents:
+        inline: |
+          [Resolve]
+          DNSStubListener=no
+
+    # Automatic OS updates: reboot only inside a nightly window
+    # (after the 03:00 backup job).
+    - path: /etc/flatcar/update.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          REBOOT_STRATEGY=reboot
+          LOCKSMITHD_REBOOT_WINDOW_START=04:30
+          LOCKSMITHD_REBOOT_WINDOW_LENGTH=1h
+
+    # Flatcar ships Docker but not the compose plugin. The standalone binary
+    # is only used to start Komodo itself; Komodo Periphery brings its own.
+    - path: /opt/bin/docker-compose
+      mode: 0755
+      contents:
+        source: https://github.com/docker/compose/releases/download/v5.7.0/docker-compose-linux-x86_64
+        verification:
+          hash: sha256-7758048ad38e580f22559603312874fec8bb638d021a9e64182385fc17cc12a2
+
+    # Komodo (Core + Periphery + DB). Embedded from this repo at build time.
+    - path: /etc/komodo/compose.yaml
+      mode: 0644
+      contents:
+        local: komodo/compose.yaml
+
+    # Komodo secrets. Embedded from the git-ignored secrets/ folder at build
+    # time; never committed.
+    - path: /etc/komodo/compose.env
+      mode: 0600
+      contents:
+        local: secrets/komodo.env
+
+  links:
+    - path: /etc/localtime
+      target: /usr/share/zoneinfo/Europe/Oslo
+      overwrite: true
+      hard: false
+
+systemd:
+  units:
+    - name: docker.service
+      enabled: true
+
+    # ZFS backups share on the Proxmox host (NFS).
+    - name: mnt-bigbackup.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Proxmox ZFS backups share (NFS)
+        Wants=network-online.target
+        After=network-online.target
+
+        [Mount]
+        What=192.168.0.107:/storage/shares/backups
+        Where=/mnt/bigbackup
+        Type=nfs4
+        Options=noatime,_netdev,nofail
+
+        [Install]
+        WantedBy=remote-fs.target
+
+    # Immich library from the Proxmox host (virtiofs mapping "immich-fs"),
+    # read-only. Only the backup job reads it.
+    - name: mnt-immich.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Immich library (virtiofs, read-only)
+
+        [Mount]
+        What=immich-fs
+        Where=/mnt/immich
+        Type=virtiofs
+        Options=ro,nofail
+
+        [Install]
+        WantedBy=local-fs.target
+
+    # Starts Komodo. Everything else is deployed BY Komodo from git.
+    - name: komodo.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Komodo (Core + Periphery)
+        Requires=docker.service
+        After=docker.service network-online.target
+        Wants=network-online.target
+
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        WorkingDirectory=/etc/komodo
+        ExecStart=/opt/bin/docker-compose --project-name komodo --env-file compose.env -f compose.yaml up -d --remove-orphans
+
+        [Install]
+        WantedBy=multi-user.target

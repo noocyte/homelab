@@ -1,65 +1,181 @@
-# Infrastructure as Code (IaC) & GitOps Cluster
+# Homelab
 
-This repository contains the automation playbooks to provision a virtual machine on a physical Proxmox node (Layer 0), bootstrap our core Docker/Portainer engine inside it (Layer 1), and layout the structure for application stacks managed via GitOps (Layer 2).
+GitOps for the home lab. **Git is the source of truth**: the VM's operating
+system config, the deployment tool (Komodo) and every app stack live in this
+repo. Secrets do not.
 
----
+```
+Proxmox (192.168.0.107, "pve")             ← managed by hand, NOT updated (NVIDIA)
+ ├─ VM 102  plex-enc     Immich + Plex     ← not managed here (yet)
+ ├─ LXC 100 nas-server   Samba (.220)      ← Home Assistant backups go through it
+ └─ VM 200  docker-host  Flatcar (.240)    ← THIS REPO
+     ├─ komodo.service   Komodo Core + Periphery (started by the OS)
+     └─ Komodo stacks    everything in compose/ (deployed by Komodo from git)
+```
 
-## Layer 0: Proxmox Virtual Machine Provisioning
-
-The 'ansible/create_vm.yml' playbook communicates with your physical Proxmox node's API, imports a lightweight Cloud-Init operating system image, and spins up a dedicated virtual machine.
-
-### 1. Host Prerequisite (Download the Cloud Image)
-Because Proxmox requires Cloud-Init disk images ('.qcow2') to be imported at the block level, you must download the official Debian 12 cloud image directly onto your physical Proxmox hardware first.
-
-SSH into your Proxmox server (or open the Shell via the Proxmox Web UI) and run:
-
-    mkdir -p /var/lib/vz/snippets
-    wget -O /var/lib/vz/snippets/debian-12.qcow2 https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
-
-### 2. Local Control Node Setup
-Before running the Proxmox automation, ensure your local development machine has the required Proxmox API Python packages injected into your Ansible environment:
-
-    brew install ansible
-    ansible-galaxy role install geerlingguy.docker
-    ansible-galaxy collection install community.proxmox
-    ansible-galaxy collection install community.docker
-    ansible-galaxy collection install community.general
-
-### 3. Execution Runbook
-To build and start the VM, execute the playbook while safely passing your Proxmox root password into your terminal environment memory (keeping it entirely out of Git):
-
-    cd ansible
-    export PVE_PASSWORD="YourActualProxmoxRootPasswordHere"
-    ansible-playbook create_vm.yml
+| Path | What |
+|---|---|
+| `flatcar/docker-host.bu` | The VM's whole OS config (user, SSH key, mounts, Docker, Komodo) |
+| `scripts/build-ignition.sh` | Turns the above into `build/docker-host.ign` (incl. secrets) |
+| `komodo/compose.yaml` | Komodo itself |
+| `komodo/sync/*.toml` | Which stacks exist, and how they are configured (Komodo "Resource Sync") |
+| `compose/<app>/compose.yaml` | One folder per app |
+| `secrets/`, `build/` | **Git-ignored.** Generated locally, contain passwords |
 
 ---
 
-## Layer 1: Host Bootstrapping (Docker & Portainer)
+## Rebuilding the docker VM from scratch
 
-Once your VM is spun up and attached to your local network, 'ansible/bootstrap.yml' handles configuring the operating system, freeing up network ports (like port 53 for Pi-hole), and installing Portainer.
+Run on your desktop, in this repo, unless the step says *Proxmox shell*.
 
-### 1. Update Your Target Inventory
-Open 'ansible/inventory.ini' and update the IP address to match the network IP allocated to your brand-new VM:
+### 1. Build the Ignition config
 
-    [my_docker_servers]
-    192.168.0.59 ansible_user=debian
+```sh
+scripts/build-ignition.sh
+```
 
-*(Note: Official Debian Cloud images utilize 'debian' as the default administrative user profile instead of 'root').*
+The first run creates `secrets/komodo.env` with random passwords and prints
+the Komodo admin login. **Save the admin password in the password manager.**
+Later runs reuse the same secrets. The output, `build/docker-host.ign`, is the
+VM's config incl. secrets.
 
-### 2. Execution Runbook
-Run the bootstrap script to lay down Docker and spin up Portainer:
+### 2. Copy it to Proxmox
 
-    ansible-playbook -i ansible/inventory.ini ansible/bootstrap.yml --private-key=~/.ssh/id_ed25519
+```sh
+scp build/docker-host.ign root@192.168.0.107:/var/lib/vz/snippets/docker-host.ign
+```
 
-Once completed, navigate to 'https://<YOUR-VM-IP>:9443' to access Portainer.
+### 3. Create the VM (*Proxmox shell*)
+
+```sh
+VM_ID=200
+cd /var/lib/vz/import
+wget -O flatcar.img https://stable.release.flatcar-linux.net/amd64-usr/current/flatcar_production_proxmoxve_image.img
+
+qm create $VM_ID --name docker-host --onboot 1 \
+  --bios ovmf --efidisk0 ssd-pool:1 \
+  --machine q35 --args "-machine sata=off" \
+  --cores 4 --memory 12288 --agent 1 \
+  --net0 virtio,bridge=vmbr0 \
+  --ipconfig0 ip=192.168.0.240/24,gw=192.168.0.1 --nameserver 1.1.1.1 \
+  --virtio0 ssd-pool:0,import-from=/var/lib/vz/import/flatcar.img --boot order=virtio0 \
+  --scsihw virtio-scsi-pci --scsi0 ssd-pool:cloudinit \
+  --virtiofs0 immich-fs \
+  --cicustom user=local:snippets/docker-host.ign
+
+qm disk resize $VM_ID virtio0 128G
+qm start $VM_ID
+rm /var/lib/vz/import/flatcar.img
+```
+
+Notes:
+- Ignition runs **once, on first boot**. To change OS config later: edit the
+  `.bu` file, rebuild, and recreate the VM (data on `/srv` is on the VM disk,
+  so restore it from backup, see below), or apply the change by hand and keep
+  the `.bu` file in sync.
+- Messages about cloud-init failing during boot are expected and harmless
+  (Flatcar reads the same file with Ignition).
+- The VM uses `1.1.1.1` for its own DNS on purpose, so it doesn't depend on
+  the Pi-hole it runs.
+
+### 4. Check the VM
+
+```sh
+ssh core@192.168.0.240
+systemctl status komodo mnt-bigbackup.mount mnt-immich.mount
+docker ps
+```
+
+Komodo UI: **http://192.168.0.240:9120**. Log in as `admin`.
+
+### 5. Connect Komodo to this repo (one time)
+
+1. **Settings → Variables**: add every secret from the [table below](#secrets),
+   each with **Secret** ticked.
+2. **Syncs → New Resource Sync**, named `homelab`: repo `noocyte/homelab`,
+   branch `main`, resource path `komodo/sync`. Save, then **Refresh** and
+   **Execute**.
+
+The sync creates all stacks and deploys those with `deploy = true`. From then
+on the sync manages itself (`komodo/sync/sync.toml`).
+
+### 6. Restore data
+
+Each app keeps its data in `/srv/<app>` on the VM. Restore **before**
+deploying the app, or stop it first.
+
+| App | Restore from |
+|---|---|
+| backup | `rclone.conf` → `/srv/rclone/rclone.conf` (mode 600). The crypt password is in the password manager; the Jottacloud token can be recreated with `rclone config`. |
+| trip-planner | `trip-planner-storage.tar.gz` → extract into `/srv/trip-planner/` |
+| crafty | `/srv/crafty/` |
+| teslamate | Postgres dump (`pg_dump`) → restore into the `database` service, see "Migrating TeslaMate" |
 
 ---
 
-## Layer 2: Application Stacks (Portainer GitOps)
+## Day to day
 
-With Portainer running, all apps inside the 'compose/' directory are managed strictly via Portainer's GitOps engine. Do NOT deploy these files manually over SSH.
+- **Change an app**: edit `compose/<app>/compose.yaml`, push to `main`, then
+  click **Deploy** on the stack in Komodo. Komodo polls git every 5 minutes
+  and shows pending changes. Auto-deploy on push needs a webhook that GitHub
+  can reach (todo).
+- **Add an app**: new folder in `compose/`, a `[[stack]]` entry in
+  `komodo/sync/stacks.toml`, push, then **Execute** the `homelab` sync.
+- **OS updates**: automatic. Flatcar downloads updates and reboots in the
+  04:30-05:30 window. A failed update rolls back by itself.
+- **Logs / shell / container stats**: Komodo UI. In a terminal: `ssh core@192.168.0.240`,
+  then `docker ...`, or `lazydocker`.
 
-### 1. Pi-hole Standalone
-* Compose File: 'compose/pihole/docker-compose.yml'
-* Portainer Configuration: Point Portainer to this repository, track your branch, and specify the compose path. 
-* Environment Variables: Define 'PIHOLE_ADMIN_PASSWORD' and 'HOST_IP' securely inside the Portainer Stack UI during initialization.
+## Secrets
+
+Stored as Komodo Variables (secret), used in `komodo/sync/stacks.toml` as
+`[[NAME]]`. Keep a copy of each in the password manager.
+
+| Variable | Used by |
+|---|---|
+| `PIHOLE_ADMIN_PASSWORD` | pihole |
+| `CLOUDFLARE_API_TOKEN` | cloudflare-ddns (Zone DNS Edit + Account Filter Lists Edit) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | cloudflared |
+| `ROUTER_GOOGLE_API_KEY`, `ROUTER_DATEX_USERNAME`, `ROUTER_DATEX_PASSWORD` | weatherrouter |
+| `TESLAMATE_ENCRYPTION_KEY` | teslamate (**must** be the original key) |
+| `TESLAMATE_DB_PASS` | teslamate |
+| `TESLAMATE_TIBBER_TOKEN`, `TESLAMATE_ABRP_TOKEN` | teslamate |
+| `TESLAMATE_SAIC_TOPIC_PREFIX`, `TESLAMATE_SAIC_DB_URI` | teslamate (saic2postgresql) |
+
+Not in Komodo: `secrets/komodo.env` (Komodo's own DB/admin/JWT secrets,
+embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
+
+## Ports on 192.168.0.240
+
+| Port | App |
+|---|---|
+| 53 tcp/udp | Pi-hole DNS |
+| 8080 | Pi-hole admin (`/admin`) |
+| 9120 | Komodo |
+| 8300 | trip-planner |
+| 8200 | weatherrouter |
+| 4000 / 3000 | TeslaMate / Grafana |
+| 1883 | Mosquitto (MQTT) |
+| 5000 | OSRM |
+| 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
+
+## Migrating TeslaMate (from serverlite)
+
+The database is the valuable part. The data is copied, never moved: serverlite
+stays untouched until the new instance is verified.
+
+1. On serverlite: stop everything except the database
+   (`docker compose stop teslamate teslamateagile abrp saic2postgresql grafana`).
+2. Dump both databases: `pg_dump -Fc` of `teslamate` and `mg_ismart`.
+3. Copy the dumps to the new VM and check their checksums.
+4. On the new VM: start only `database`, restore both dumps, compare row counts
+   with serverlite.
+5. Copy `osrm-data` (or run `osrm-setup.sh`), and the mosquitto config.
+6. Set `deploy = true` for teslamate in `komodo/sync/stacks.toml`, push,
+   execute the sync, and check the TeslaMate UI and Grafana.
+7. Only then stop TeslaMate on serverlite.
+
+## Not managed here (yet)
+
+- `compose/immich/` runs on VM 102 (`plex-enc`), deployed by hand.
+- Proxmox host config, UniFi (see issue #7).
