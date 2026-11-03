@@ -1,5 +1,10 @@
-# Crafty Controller (Minecraft server manager). Data: /srv/crafty/*
-# Router port forwards needed: 25500-25600/tcp, 19132/udp → 192.168.0.240
+# Crafty Controller (Minecraft server manager). Web UI: https://192.168.0.240:8443
+# Data:    /srv/crafty/{config,servers,logs,import}
+# Backups (ZFS share /mnt/backups/crafty, mirrored to Jotta at 03:00):
+#   nightly/         backup.py at 02:40: DB + config + all servers, 14 kept
+#   server-backups/  Crafty's own per-server backups (made from the UI)
+# Router port forwards: Minecraft Java 25565/tcp+udp, Bedrock 19132-19133/udp
+# → 192.168.0.240.
 services:
   crafty:
     image: registry.gitlab.com/crafty-controller/crafty-4:4.5.4
@@ -13,8 +18,14 @@ services:
       - "19132:19132/udp"         # Bedrock
       - "25500-25600:25500-25600" # Minecraft server port range
     volumes:
-      - /srv/crafty/backups:/crafty/backups
+      - /mnt/backups/crafty/server-backups:/crafty/backups   # ZFS share (NFS)
+      - /mnt/backups/crafty/nightly:/nightly                  # ZFS share (NFS)
+      - .:/scripts:ro                                         # backup.py
       - /srv/crafty/logs:/crafty/logs
       - /srv/crafty/servers:/crafty/servers
       - /srv/crafty/config:/crafty/app/config
       - /srv/crafty/import:/crafty/import
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.crafty-backup.schedule: "0 40 2 * * *"   # 02:40 daily
+      ofelia.job-exec.crafty-backup.command: "python3 /scripts/backup.py"

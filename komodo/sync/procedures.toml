@@ -12,7 +12,7 @@
 #
 # Stacks opt in with the "gitops" tag in stacks.toml, so adding a stack never
 # changes this file. A stack that has never been deployed counts as "changed"
-# and would be started - crafty has no tag until /srv/crafty is migrated.
+# and would be started.
 #
 # This procedure runs the sync, so the sync can't update this procedure while
 # it runs ("procedure sync loop exited after max iterations"). After changing

@@ -38,7 +38,7 @@ if ! [ -d "$B/teslamate" ]; then
   # off-site copies.
   log "WARNING: $B not mounted, skipping everything but immich"
 else
-  for d in komodo teslamate trip-planner victoriametrics homeassistant proxmox onedrive; do
+  for d in komodo teslamate trip-planner victoriametrics homeassistant proxmox onedrive crafty; do
     if [ -n "$(ls -A "$B/$d" 2>/dev/null)" ]; then
       log "syncing $d"
       rclone sync "$B/$d" "jottacrypt:$d" \

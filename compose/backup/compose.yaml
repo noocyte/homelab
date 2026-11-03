@@ -12,6 +12,7 @@
 #     homeassistant/     HA backups (~05:30, HA network storage "NASBACKUP", NFS)
 #     proxmox/           vzdump images (Sun 01:00) + host config (01:30), see proxmox/
 #     onedrive/<name>/   personal OneDrive copies (02:00, onedrive.sh, below)
+#     crafty/            nightly/ (02:40, compose/crafty/backup.py) + Crafty's own server-backups/
 #   /srv/rclone-onedrive/rclone.conf   OneDrive logins (remotes onedrive-<name>)
 #
 # backup.sh is mounted via its folder: Komodo clones this repo onto the host
