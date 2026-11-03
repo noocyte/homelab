@@ -1,0 +1,16 @@
+# Our own Grafana dashboards, loaded from git (../dashboards/*.json).
+# Git is the source of truth: Grafana refuses to save changes to them.
+# To change one: edit in Grafana → Save → "Copy JSON to clipboard", paste it
+# into the file in compose/teslamate/grafana/dashboards/, and merge.
+apiVersion: 1
+
+providers:
+  - name: homelab
+    orgId: 1
+    folder: ""                 # General, where "Visited - All Cars" always was
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards
