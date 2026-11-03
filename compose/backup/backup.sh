@@ -45,4 +45,20 @@ if [ -n "$(ls -A /sources/teslamate 2>/dev/null)" ]; then
     --log-level INFO
 fi
 
+# Trip planner: whole storage folder (images, config, nightly DB copy made
+# at 02:45 by backup-db.py). The live database files are skipped - a copy
+# of a WAL-mode database while it's in use can be broken.
+if [ -f /sources/trip-planner/backups/trip-nightly.sqlite ]; then
+  log "syncing trip-planner"
+  rclone sync /sources/trip-planner jottacrypt:trip-planner \
+    --exclude '/trip.sqlite' \
+    --exclude '/trip.sqlite-wal' \
+    --exclude '/trip.sqlite-shm' \
+    --exclude '*.partial' \
+    --backup-dir "jottacrypt:archive/trip-planner/$DATE" \
+    --log-level INFO
+else
+  log "WARNING: no trip-planner nightly DB copy found, skipping trip-planner"
+fi
+
 log "done"

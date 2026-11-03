@@ -33,6 +33,7 @@ services:
       - /mnt/immich:/sources/immich:ro
       - /srv/backups:/sources/dumps:ro
       - /mnt/bigbackup/teslamate:/sources/teslamate:ro   # TeslaMate dumps on ZFS
+      - /srv/trip-planner/storage:/sources/trip-planner:ro
       # Folder, not single file: a single-file bind mount keeps pointing at the
       # old file after git pull replaces it.
       - .:/scripts:ro

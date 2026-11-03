@@ -156,7 +156,9 @@ embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 | TeslaMate DBs (`teslamate`, `mg_ismart`), `pg_dump -Fc` | 02:30 (UTC in file names) | ZFS: `/storage/shares/backups/teslamate` (VM: `/mnt/bigbackup/teslamate`) | 14 days |
 | ↳ same files, encrypted | 03:00 | Jottacloud `jottacrypt:teslamate` | mirror of the above |
 | Immich library + DB backups | 03:00 | Jottacloud `jottacrypt:immich` | changed/deleted files kept in `archive/<date>` |
-| Komodo DB | Komodo's own backup procedure | `/srv/backups/komodo` → Jottacloud `jottacrypt:dumps` | |
+| Komodo DB (users, API keys, secret variables) | 01:00, Komodo's "Backup Core Database" procedure | `/srv/backups/komodo` → Jottacloud `jottacrypt:dumps` at 03:00 | changed/deleted files kept in `archive/<date>` |
+| Trip planner DB, consistent copy (`backup-db.py`) | 02:45 | `/srv/trip-planner/storage/backups/trip-nightly.sqlite` | latest only |
+| ↳ whole storage folder (DB copy, images, config), encrypted | 03:00 | Jottacloud `jottacrypt:trip-planner` | changed/deleted files kept in `archive/<date>` |
 
 Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
 the containers. The TeslaMate dump refuses to run if the ZFS share isn't
