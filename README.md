@@ -199,6 +199,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 5000 | OSRM |
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
+| 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
 | 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
 
 ## Migrating TeslaMate (from serverlite)

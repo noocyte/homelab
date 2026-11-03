@@ -6,3 +6,8 @@ scrape_configs:
     scrape_interval: 30s        # UniFi updates its counters about every 30 s
     static_configs:
       - targets: ["192.168.0.240:9130"]
+
+  - job_name: pihole
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["192.168.0.240:9617"]
