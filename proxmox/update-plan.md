@@ -56,6 +56,30 @@ vzdump images of VM 102 / LXC 100 are recent.
 5. **Reboot (outage 2)** into 7.0.14. Same checks as step 3, plus
    `pveversion`, `zpool status`, all guests running, Pi-hole answering.
 
+6. **Temperature and disk-health metrics** (only after the update - on the
+   un-updated host, `apt install` pulled in 14 core upgrades such as
+   util-linux/mount/login, 2026-11-03):
+   ```sh
+   apt install prometheus-node-exporter prometheus-node-exporter-collectors
+   ```
+   node_exporter on `:9100`: CPU temperatures (coretemp/hwmon), ZFS (ARC,
+   pool state), disk I/O, filesystems. The collectors package adds a SMART
+   textfile collector (`smartmon`, a systemd timer using the host's
+   smartctl) → temperature, reallocated/pending sectors, power-on hours and
+   SMART status for the four ZFS disks and the SSD. Check
+   `curl -s localhost:9100/metrics | grep -E "node_hwmon_temp|smartmon_"`;
+   if the HDD temperatures are missing from hwmon, `modprobe drivetemp` (and
+   add it to `/etc/modules`).
+   Then in the repo: a scrape job `proxmox-node` (`192.168.0.107:9100`) in
+   `compose/victoriametrics/scrape.yml`, and dashboards "Node Exporter Full"
+   (grafana.com 1860) and a SMART/smartmon dashboard in the Grafana folder
+   **Proxmox**, provisioned like the others.
+
+   **GPU temperature** isn't visible on the host (passed through to VM 102).
+   Independent of this plan: an `nvidia_gpu_exporter` container in VM 102
+   (reads `nvidia-smi`; temperature, load, memory, fan, power), scraped the
+   same way, plus an NVIDIA dashboard.
+
 **Rollback:** GPU trouble on the new kernel → `proxmox-boot-tool kernel pin
 7.0.6-2-pve` and reboot; unpin later with `proxmox-boot-tool kernel unpin`.
 Step 1 undone by deleting the two files and `update-initramfs -u -k all`.
