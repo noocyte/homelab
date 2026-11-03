@@ -115,12 +115,16 @@ deploying the app, or stop it first.
 
 ## Day to day
 
-- **Change an app**: edit `compose/<app>/compose.yaml`, push to `main`, then
-  click **Deploy** on the stack in Komodo. Komodo polls git every 5 minutes
-  and shows pending changes. Auto-deploy on push needs a webhook that GitHub
-  can reach (todo).
+- **Change an app**: edit `compose/<app>/compose.yaml` (or its script), merge
+  to `main`. Within 5 minutes the `homelab-gitops` procedure deploys the
+  stacks whose files changed (`komodo/sync/procedures.toml`). It pauses
+  02:00-03:59 so it can't interrupt the nightly dump and backup. To deploy
+  right away: **Deploy** on the stack, or **Run** the procedure.
 - **Add an app**: new folder in `compose/`, a `[[stack]]` entry in
-  `komodo/sync/stacks.toml`, push, then **Execute** the `homelab` sync.
+  `komodo/sync/stacks.toml`, and its name in the procedure's stack list.
+  Merge; the procedure syncs and deploys it.
+- **Is it working?** Komodo → Procedures → `homelab-gitops`: last run and its
+  log. A failed run sends an alert.
 - **OS updates**: automatic. Flatcar downloads updates and reboots in the
   04:30-05:30 window. A failed update rolls back by itself.
 - **Logs / shell / container stats**: Komodo UI. In a terminal: `ssh core@192.168.0.240`,
