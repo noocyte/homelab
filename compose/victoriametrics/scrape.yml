@@ -1,0 +1,8 @@
+# What VictoriaMetrics fetches itself (Prometheus-style scraping).
+# Re-read every minute (-promscrape.configCheckInterval), so a change here
+# only needs the git pull that homelab-gitops does - no restart.
+scrape_configs:
+  - job_name: unpoller
+    scrape_interval: 30s        # UniFi updates its counters about every 30 s
+    static_configs:
+      - targets: ["192.168.0.240:9130"]

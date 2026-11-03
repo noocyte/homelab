@@ -1,7 +1,9 @@
-# Our own Grafana dashboards, loaded from git (../dashboards/*.json).
+# Our own Grafana dashboards, loaded from git (../dashboards/<folder>/*.json).
 # Git is the source of truth: Grafana refuses to save changes to them.
 # To change one: edit in Grafana → Save → "Copy JSON to clipboard", paste it
 # into the file in compose/teslamate/grafana/dashboards/, and merge.
+# New dashboard: add the JSON file (unique "uid", no "id") and list it under
+# config_files for teslamate in komodo/sync/stacks.toml.
 apiVersion: 1
 
 providers:
@@ -13,4 +15,16 @@ providers:
     allowUiUpdates: false
     updateIntervalSeconds: 60
     options:
-      path: /homelab-dashboards
+      path: /homelab-dashboards/general
+
+  # UnPoller's official Prometheus dashboards (grafana.com 11311-11315),
+  # data source set to VictoriaMetrics.
+  - name: homelab-unifi
+    orgId: 1
+    folder: UniFi
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards/unifi

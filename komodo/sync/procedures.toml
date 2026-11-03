@@ -5,14 +5,18 @@
 #   1. RunSync homelab      applies changes in komodo/sync/*.toml
 #                           (and deploys stacks with deploy = true whose
 #                           definition changed)
-#   2. DeployStackIfChanged compares each stack's files in git with what was
+#   2. DeployStackIfChanged (every stack tagged "gitops") compares each stack's files in git with what was
 #                           last deployed, and deploys only if they differ.
 #                           Files that count: compose.yaml plus the
 #                           stack's `config_files` in stacks.toml.
 #
-# The stack list is explicit on purpose: a stack that has never been deployed
-# (crafty) counts as "changed" and would be started. Add crafty here once
-# /srv/crafty is migrated.
+# Stacks opt in with the "gitops" tag in stacks.toml, so adding a stack never
+# changes this file. A stack that has never been deployed counts as "changed"
+# and would be started - crafty has no tag until /srv/crafty is migrated.
+#
+# This procedure runs the sync, so the sync can't update this procedure while
+# it runs ("procedure sync loop exited after max iterations"). After changing
+# this file: Komodo → Syncs → homelab → Execute, by hand, once.
 
 [[procedure]]
 name = "homelab-gitops"
@@ -36,5 +40,5 @@ executions = [
 [[procedure.config.stage]]
 name = "Deploy changed stacks"
 executions = [
-  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "backup, pihole, cloudflare-ddns, cloudflared, trip-planner, weatherrouter, teslamate, victoriametrics" },
+  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "*", execution.params.tags = ["gitops"] },
 ]

@@ -4,6 +4,10 @@
 # interpolated with [[NAME]]. They are never stored in git. The full list is
 # in README.md → "Secrets".
 #
+# tags "gitops"  → homelab-gitops deploys the stack when its files change in
+#                  git (procedures.toml). Leave it off for stacks that must
+#                  not start yet (crafty).
+#
 # deploy = true  → the sync deploys the stack if it isn't running or its
 #                  config changed.
 #
@@ -21,7 +25,7 @@
 [[stack]]
 name = "backup"
 deploy = true
-tags = ["infra"]
+tags = ["infra", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -33,7 +37,7 @@ post_deploy.command = "docker restart backup-scheduler"
 [[stack]]
 name = "pihole"
 deploy = true
-tags = ["infra"]
+tags = ["infra", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -49,7 +53,7 @@ post_deploy.command = "sh lists.sh"
 [[stack]]
 name = "cloudflare-ddns"
 deploy = true
-tags = ["infra"]
+tags = ["infra", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -62,7 +66,7 @@ CLOUDFLARE_API_TOKEN = [[CLOUDFLARE_API_TOKEN]]
 [[stack]]
 name = "cloudflared"
 deploy = true
-tags = ["infra"]
+tags = ["infra", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -75,7 +79,7 @@ CLOUDFLARE_TUNNEL_TOKEN = [[CLOUDFLARE_TUNNEL_TOKEN]]
 [[stack]]
 name = "trip-planner"
 deploy = true
-tags = ["apps"]
+tags = ["apps", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -88,7 +92,7 @@ post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler
 [[stack]]
 name = "weatherrouter"
 deploy = true
-tags = ["apps"]
+tags = ["apps", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -105,15 +109,31 @@ ROUTER_DATEX_PASSWORD = [[ROUTER_DATEX_PASSWORD]]
 [[stack]]
 name = "victoriametrics"
 deploy = true
-tags = ["infra"]
+tags = ["infra", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/victoriametrics"
-config_files = [{ path = "snapshot.sh", requires = "redeploy" }]
+config_files = [
+  { path = "snapshot.sh", requires = "redeploy" },
+  { path = "scrape.yml", requires = "redeploy" },   # re-read within a minute
+]
 # Reload Ofelia's jobs (victoriametrics-snapshot).
 post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
+
+[[stack]]
+name = "unpoller"
+deploy = true
+tags = ["infra", "gitops"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/unpoller"
+environment = """
+UNPOLLER_UNIFI_PASS = [[UNPOLLER_UNIFI_PASS]]
+"""
 
 [[stack]]
 name = "crafty"
@@ -128,7 +148,7 @@ run_directory = "compose/crafty"
 [[stack]]
 name = "teslamate"
 deploy = true
-tags = ["apps"]
+tags = ["apps", "gitops"]
 [stack.config]
 server = "docker-host"
 repo = "noocyte/homelab"
@@ -139,7 +159,14 @@ config_files = [
   # Grafana re-reads its provisioning on restart.
   { path = "grafana/provisioning/dashboards-homelab.yml", requires = "restart", services = ["grafana"] },
   { path = "grafana/provisioning/datasources-homelab.yml", requires = "restart", services = ["grafana"] },
-  { path = "grafana/dashboards/visited-all-cars.json", requires = "restart", services = ["grafana"] },
+  # Dashboards: Grafana re-reads changed files within a minute; listing them
+  # here makes homelab-gitops pull the change.
+  { path = "grafana/dashboards/general/visited-all-cars.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/unifi/client-insights.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/unifi/network-sites.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/unifi/uap.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/unifi/usg.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/unifi/usw.json", requires = "redeploy", services = ["grafana"] },
 ]
 pre_deploy.path = "."
 pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"

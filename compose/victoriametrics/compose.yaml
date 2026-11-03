@@ -1,5 +1,6 @@
 # VictoriaMetrics: long-term time series from Home Assistant (energy,
-# temperatures - numbers only). HA writes with its built-in InfluxDB
+# temperatures - numbers only) and UniFi network statistics (scraped from
+# unpoller, see scrape.yml). HA writes with its built-in InfluxDB
 # integration (Influx line protocol on :8428/write), Grafana reads it as a
 # Prometheus data source. See README → "Home Assistant history".
 #
@@ -13,10 +14,12 @@ services:
       - 8428:8428
     volumes:
       - /srv/victoriametrics:/storage
-      - .:/scripts:ro                          # snapshot.sh
+      - .:/scripts:ro                          # snapshot.sh, scrape.yml
     command:
       - -storageDataPath=/storage
       - -retentionPeriod=100y                  # i.e. keep everything
+      - -promscrape.config=/scripts/scrape.yml # UniFi via unpoller
+      - -promscrape.configCheckInterval=1m
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.victoriametrics-snapshot.schedule: "0 50 2 * * *"
