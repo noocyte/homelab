@@ -24,6 +24,8 @@ storage:
       mode: 0755
     - path: /srv/rclone
       mode: 0700
+    - path: /srv/rclone-onedrive
+      mode: 0700
 
   files:
     - path: /etc/hostname

@@ -11,6 +11,8 @@
 #     victoriametrics/   vmbackup, incremental (02:50, compose/victoriametrics)
 #     homeassistant/     HA backups (~05:30, HA network storage "NASBACKUP", NFS)
 #     proxmox/           vzdump images (Sun 01:00) + host config (01:30), see proxmox/
+#     onedrive/<name>/   personal OneDrive copies (02:00, onedrive.sh, below)
+#   /srv/rclone-onedrive/rclone.conf   OneDrive logins (remotes onedrive-<name>)
 #
 # backup.sh is mounted via its folder: Komodo clones this repo onto the host
 # under /etc/komodo/stacks/, so ./backup.sh exists on the host.
@@ -34,6 +36,9 @@ services:
     environment:
       - RCLONE_CONFIG=/config/rclone.conf
       - TZ=Europe/Oslo
+      # 100 Mbit/s (12 MiB/s) 06:00-00:00, full speed at night - so big
+      # first copies don't slow the house's internet in the daytime.
+      - RCLONE_BWLIMIT=06:00,12M 00:00,off
     volumes:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
@@ -45,3 +50,27 @@ services:
       ofelia.enabled: "true"
       ofelia.job-exec.nightly.schedule: "0 0 3 * * *"   # 03:00 daily
       ofelia.job-exec.nightly.command: "sh /scripts/backup.sh"
+
+  # Nightly one-way copy of personal OneDrive accounts (onedrive.sh). Its
+  # own container and config: it can write only to /mnt/backups/onedrive,
+  # and holds only the OneDrive logins. Add an account: see README →
+  # "OneDrive copies".
+  rclone-onedrive:
+    image: rclone/rclone:1
+    container_name: rclone-onedrive
+    entrypoint: ["sleep", "infinity"]   # idle; Ofelia execs the job in
+    restart: unless-stopped
+    environment:
+      - RCLONE_CONFIG=/config/rclone.conf
+      - TZ=Europe/Oslo
+      # 100 Mbit/s (12 MiB/s) 06:00-00:00, full speed at night - so big
+      # first copies don't slow the house's internet in the daytime.
+      - RCLONE_BWLIMIT=06:00,12M 00:00,off
+    volumes:
+      - /srv/rclone-onedrive:/config          # RW: rclone refreshes the OneDrive tokens
+      - /mnt/backups/onedrive:/onedrive
+      - .:/scripts:ro
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.onedrive.schedule: "0 0 2 * * *"   # 02:00 daily
+      ofelia.job-exec.onedrive.command: "sh /scripts/onedrive.sh"
