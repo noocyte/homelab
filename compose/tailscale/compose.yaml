@@ -1,0 +1,31 @@
+# Tailscale: remote access to the home network (replaces serverlite's).
+#   - subnet router for 192.168.0.0/24: reach the LAN from any tailnet device
+#   - exit node: send a device's internet traffic out through home
+#
+# State (node key, login): /srv/tailscale. Login once: on first start the log
+# prints a https://login.tailscale.com/... link - open it and log in. Then in
+# the admin console (machines → docker-host): approve the subnet route and
+# the exit node, and "Disable key expiry".
+#
+# IPv4 only: the LAN has no public IPv6, so IPv6 forwarding stays off (the
+# "IPv6 forwarding is disabled" warning in the log is expected).
+services:
+  tailscale:
+    image: tailscale/tailscale:v1.104.4
+    container_name: tailscale
+    restart: unless-stopped
+    network_mode: host          # routes for the whole LAN, not a container network
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    volumes:
+      - /srv/tailscale:/var/lib/tailscale
+    environment:
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false      # kernel networking, needed for routing
+      - TS_HOSTNAME=docker-host
+      - TS_ROUTES=192.168.0.0/24
+      - TS_EXTRA_ARGS=--advertise-exit-node
+      - TS_ACCEPT_DNS=false     # the VM keeps 1.1.1.1 (see flatcar/docker-host.bu)
