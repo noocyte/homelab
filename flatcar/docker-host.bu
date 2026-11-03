@@ -105,6 +105,25 @@ systemd:
         [Install]
         WantedBy=remote-fs.target
 
+    # Personal archive on the Proxmox host (NFS), read-only: only the backup
+    # job reads it (→ Jotta).
+    - name: mnt-archive.mount
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Personal archive on Proxmox ZFS (NFS, read-only)
+        Wants=network-online.target
+        After=network-online.target
+
+        [Mount]
+        What=192.168.0.107:/storage/shares/archive
+        Where=/mnt/archive
+        Type=nfs4
+        Options=ro,noatime,_netdev,nofail
+
+        [Install]
+        WantedBy=remote-fs.target
+
     # Immich library from the Proxmox host (virtiofs mapping "immich-fs"),
     # read-only. Only the backup job reads it.
     - name: mnt-immich.mount

@@ -51,5 +51,17 @@ else
   done
 fi
 
+# Personal archive (old NAS: KNX project, code, configs). Unlike the
+# service folders there's no history here, so changed/deleted files are
+# kept in archive/personal-archive/<date> on Jotta.
+if grep -q " /sources/archive nfs" /proc/mounts && [ -n "$(ls -A /sources/archive 2>/dev/null)" ]; then
+  log "syncing personal archive"
+  rclone sync /sources/archive jottacrypt:personal-archive \
+    --backup-dir "jottacrypt:archive/personal-archive/$DATE" \
+    --log-level INFO || { log "ERROR: personal archive failed"; FAILED="$FAILED personal-archive"; }
+else
+  log "WARNING: /sources/archive not mounted or empty, skipping personal archive"
+fi
+
 [ -z "$FAILED" ] || { log "failed:$FAILED"; exit 1; }
 log "done"

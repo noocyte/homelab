@@ -13,6 +13,7 @@ up, so it can be done again on a fresh install. The nightly config tarball
 | `ssd-pool` | LVM-thin on the SSD: system disks of VM 102, VM 200, LXC 100 |
 | Network | `vmbr0` on `nic0`, 192.168.0.107/24, gw .1 |
 | NFS export | `/storage/shares/backups` → 192.168.0.0/24, `all_squash,anonuid=100000`. VM 200 mounts it as `/mnt/backups`; Home Assistant mounts its subfolder `homeassistant/` (HA → Settings → System → Storage, `NASBACKUP`) |
+| NFS export | `/storage/shares/archive` → 192.168.0.0/24, same options. Desktop: `/var/mnt/bigarchive`; VM 200: `/mnt/archive` (read-only, for the Jotta backup) |
 | virtiofs mappings | `immich-fs` → `/storage/immich` (VM 102, VM 200 read-only), `media-fs` → `/storage/shares/media` (VM 102) |
 | GPU passthrough | kernel cmdline `intel_iommu=on iommu=pt`; vfio modules in `/etc/modules`; nouveau/nvidiafb blacklisted. VM 102 `hostpci0: 01:00` |
 | sanoid | `storage/immich`: 48 hourly, 14 daily, 8 weekly, 3 monthly |

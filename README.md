@@ -180,6 +180,7 @@ Immich is the exception: its library and DB dumps are synced straight from
 | `crafty/nightly/` | Crafty DB + config + all Minecraft servers | `compose/crafty/backup.py`, 02:40 | 14 days |
 | `crafty/server-backups/` | Crafty's own per-server backups | Crafty's UI | Crafty's setting |
 | `proxmox/host/` | Proxmox host config | `proxmox/pve-config-backup.sh`, 01:30 | 14 days |
+| *(archive)* | `/storage/shares/archive`: personal archive from the old NAS (KNX project, code, old configs) | by hand | changed/deleted kept in `jottacrypt:archive/personal-archive/<date>` |
 | *(Immich)* | library + Immich's DB dumps | Immich; synced from `/mnt/immich` | changed/deleted kept in `jottacrypt:archive/immich/<date>` |
 
 All the jobs refuse to write if the share isn't mounted (nothing lands on
@@ -216,7 +217,7 @@ Jotta can be read) and Home Assistant's backup encryption key (HA →
 Settings → System → Backups → emergency kit).
 
 Not backed up: `/storage/shares/media`, `/storage/shares/public`,
-`/storage/shares/backups/From NAS`. VM 200 (docker-host) is rebuilt from
+`/storage/shares/rips` (DVD images), `/storage/shares/emu` (games). VM 200 (docker-host) is rebuilt from
 this repo rather than imaged.
 
 Bandwidth: both rclone containers are limited to 100 Mbit/s between 06:00
