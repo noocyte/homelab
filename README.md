@@ -120,9 +120,12 @@ deploying the app, or stop it first.
   stacks whose files changed (`komodo/sync/procedures.toml`). It pauses
   02:00-03:59 so it can't interrupt the nightly dump and backup. To deploy
   right away: **Deploy** on the stack, or **Run** the procedure.
-- **Add an app**: new folder in `compose/`, a `[[stack]]` entry in
-  `komodo/sync/stacks.toml`, and its name in the procedure's stack list.
-  Merge; the procedure syncs and deploys it.
+- **Add an app**: new folder in `compose/` and a `[[stack]]` entry in
+  `komodo/sync/stacks.toml` with the `gitops` tag. Merge; the procedure
+  syncs and deploys it.
+- **Changed `komodo/sync/procedures.toml`?** The procedure can't update
+  itself while it runs, so execute the `homelab` sync by hand once
+  (Komodo → Syncs → homelab → Execute).
 - **Is it working?** Komodo → Procedures → `homelab-gitops`: last run and its
   log. A failed run sends an alert.
 - **OS updates**: automatic. Flatcar downloads updates and reboots in the
@@ -145,6 +148,7 @@ Stored as Komodo Variables (secret), used in `komodo/sync/stacks.toml` as
 | `TESLAMATE_DB_PASS` | teslamate |
 | `TESLAMATE_TIBBER_TOKEN`, `TESLAMATE_ABRP_TOKEN` | teslamate |
 | `TESLAMATE_SAIC_TOPIC_PREFIX`, `TESLAMATE_SAIC_DB_URI` | teslamate (saic2postgresql) |
+| `UNPOLLER_UNIFI_PASS` | unpoller (UniFi local account `unpoller`, View Only) |
 
 Not in Komodo: `secrets/komodo.env` (Komodo's own DB/admin/JWT secrets,
 embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
@@ -194,6 +198,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 1883 | Mosquitto (MQTT) |
 | 5000 | OSRM |
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
+| 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
 
 ## Migrating TeslaMate (from serverlite)
@@ -244,6 +249,19 @@ states and text attributes are dropped.
 
 Restore: stop the stack, copy the snapshot from `jottacrypt:victoriametrics`
 into `/srv/victoriametrics` (it *is* a complete storage folder), start it.
+
+## UniFi statistics (unpoller)
+
+`compose/unpoller` reads the UniFi controller (UDR Ultra, 192.168.0.1) with
+a read-only account and exposes the numbers on `:9130/metrics`.
+VictoriaMetrics scrapes them every 30 s (`compose/victoriametrics/scrape.yml`)
+and keeps them with the rest. Dashboards: Grafana folder **UniFi**, from
+UnPoller's official set (grafana.com 11311-11315), in
+`compose/teslamate/grafana/dashboards/unifi/`.
+
+UniFi account: UniFi → Admins & Users → Create New Admin → "Restrict to
+local access only", username `unpoller`, role **View Only** for Network.
+Its password is the Komodo secret `UNPOLLER_UNIFI_PASS`.
 
 ## Not managed here (yet)
 

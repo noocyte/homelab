@@ -1,0 +1,25 @@
+# UnPoller: reads statistics from the UniFi controller (UDR Ultra) and exposes
+# them as Prometheus metrics on :9130/metrics. VictoriaMetrics scrapes them
+# every 30 s (compose/victoriametrics/scrape.yml); dashboards are in
+# compose/teslamate/grafana/dashboards/unifi/.
+#
+# UniFi account: local, read-only ("View Only"), named "unpoller".
+# Secret (Komodo): UNPOLLER_UNIFI_PASS
+#
+# Pinned: UnPoller releases very often. Upgrade deliberately.
+services:
+  unpoller:
+    image: ghcr.io/unpoller/unpoller:v5.6.3
+    restart: unless-stopped
+    ports:
+      - 9130:9130
+    environment:
+      UP_UNIFI_DEFAULT_URL: https://192.168.0.1
+      UP_UNIFI_DEFAULT_USER: unpoller
+      UP_UNIFI_DEFAULT_PASS: ${UNPOLLER_UNIFI_PASS}
+      UP_UNIFI_DEFAULT_VERIFY_SSL: "false"     # self-signed cert on the UDR
+      UP_UNIFI_DEFAULT_SAVE_SITES: "true"
+      UP_UNIFI_DEFAULT_SAVE_DPI: "true"
+      UP_INFLUXDB_DISABLE: "true"              # Prometheus output only
+      UP_PROMETHEUS_HTTP_LISTEN: 0.0.0.0:9130
+      UP_POLLER_QUIET: "true"                  # only startup + errors in the log
