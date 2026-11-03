@@ -39,3 +39,14 @@ providers:
     updateIntervalSeconds: 60
     options:
       path: /homelab-dashboards/pihole
+
+  # prometheus-pve-exporter's dashboard "Proxmox via Prometheus" (grafana.com 10347).
+  - name: homelab-proxmox
+    orgId: 1
+    folder: Proxmox
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards/proxmox
