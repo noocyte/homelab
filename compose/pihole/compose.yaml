@@ -5,6 +5,10 @@
 # which Komodo runs after each deploy.
 #
 # Secret (Komodo): PIHOLE_ADMIN_PASSWORD
+#
+# pihole-exporter publishes Pi-hole's statistics on :9617/metrics for
+# VictoriaMetrics (compose/victoriametrics/scrape.yml). Dashboard: Grafana
+# folder "Pi-hole".
 
 services:
   pihole:
@@ -29,3 +33,17 @@ services:
       FTLCONF_dns_cnameRecords: "homeassistant.local,ha.home.lan"
     volumes:
       - /srv/pihole/etc-pihole:/etc/pihole
+
+  pihole-exporter:
+    # v1.x speaks Pi-hole v6's API. Pinned; upgrade deliberately.
+    image: ekofr/pihole-exporter:v1.2.0
+    restart: unless-stopped
+    depends_on:
+      - pihole
+    ports:
+      - "9617:9617"
+    environment:
+      PIHOLE_HOSTNAME: pihole       # service name on this stack's network
+      PIHOLE_PORT: "80"             # inside the container, not the published 8080
+      PIHOLE_PASSWORD: ${PIHOLE_ADMIN_PASSWORD}
+      PORT: "9617"

@@ -28,3 +28,14 @@ providers:
     updateIntervalSeconds: 60
     options:
       path: /homelab-dashboards/unifi
+
+  # pihole-exporter's official dashboard (grafana.com 10176).
+  - name: homelab-pihole
+    orgId: 1
+    folder: Pi-hole
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards/pihole
