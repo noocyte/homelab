@@ -21,7 +21,6 @@ services:
       - -promscrape.config=/scripts/scrape.yml # UniFi via unpoller
       - -promscrape.configCheckInterval=1m
       - -relabelConfig=/scripts/relabel.yml    # drop HA attribute noise
-      - -relabelConfigCheckInterval=1m
       # Identical samples (same series + timestamp) are stored once, so
       # imports/backfills can safely be re-run.
       - -dedup.minScrapeInterval=1ms

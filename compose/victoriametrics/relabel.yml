@@ -1,6 +1,6 @@
 # Applied to everything VictoriaMetrics receives (-relabelConfig).
-# Re-read every minute (-relabelConfigCheckInterval), so a change here only
-# needs the git pull that homelab-gitops does.
+# Read at startup: a change here restarts the container (config_files in
+# komodo/sync/stacks.toml).
 
 # Home Assistant's InfluxDB integration sends every attribute of every sensor
 # as its own series (friendly_name_str, icon_str, min, max, ...). Keep only
