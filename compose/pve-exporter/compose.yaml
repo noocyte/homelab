@@ -1,0 +1,22 @@
+# Proxmox metrics: prometheus-pve-exporter reads Proxmox's API (CPU, memory,
+# disk, network per host/VM/container, storage usage, up/down) and publishes
+# them on :9221/pve for VictoriaMetrics (compose/victoriametrics/scrape.yml).
+# Dashboard: Grafana folder "Proxmox".
+#
+# Read-only access: Proxmox user prometheus@pve, role PVEAuditor on /, API
+# token "exporter" (privsep off). Its secret is the Komodo variable
+# PVE_EXPORTER_TOKEN. Recreate (Proxmox shell):
+#   pveum user add prometheus@pve
+#   pveum acl modify / --users prometheus@pve --roles PVEAuditor
+#   pveum user token add prometheus@pve exporter --privsep 0
+services:
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:3.10.2
+    restart: unless-stopped
+    ports:
+      - "9221:9221"
+    environment:
+      - PVE_USER=prometheus@pve
+      - PVE_TOKEN_NAME=exporter
+      - PVE_TOKEN_VALUE=${PVE_EXPORTER_TOKEN}
+      - PVE_VERIFY_SSL=false   # Proxmox's self-signed certificate

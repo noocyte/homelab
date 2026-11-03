@@ -153,6 +153,7 @@ Stored as Komodo Variables (secret), used in `komodo/sync/stacks.toml` as
 | `TESLAMATE_TIBBER_TOKEN`, `TESLAMATE_ABRP_TOKEN` | teslamate |
 | `TESLAMATE_SAIC_TOPIC_PREFIX`, `TESLAMATE_SAIC_DB_URI` | teslamate (saic2postgresql) |
 | `UNPOLLER_UNIFI_PASS` | unpoller (UniFi local account `unpoller`, View Only) |
+| `PVE_EXPORTER_TOKEN` | pve-exporter (Proxmox API token `prometheus@pve!exporter`, PVEAuditor - read-only) |
 
 Not in Komodo: `secrets/komodo.env` (Komodo's own DB/admin/JWT secrets,
 embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
@@ -255,6 +256,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
+| 9221 | pve-exporter (`/pve?target=192.168.0.107`, scraped by VictoriaMetrics) |
 | 41641/udp | Tailscale (host network) |
 | 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
 
