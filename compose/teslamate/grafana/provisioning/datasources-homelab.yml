@@ -1,0 +1,19 @@
+# MG4 = the mg_ismart database (saic2postgresql), used by "Visited - All Cars".
+# Same uid as the data source originally made in the UI, so nothing that
+# refers to it breaks. The password comes from the grafana container's env.
+apiVersion: 1
+
+datasources:
+  - name: MG4
+    uid: cfjfvx12n6rk0b
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: $DATABASE_HOST:5432
+    user: $DATABASE_USER
+    secureJsonData:
+      password: $DATABASE_PASS
+    jsonData:
+      database: mg_ismart
+      sslmode: disable
+      postgresVersion: 1500
+    editable: false

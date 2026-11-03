@@ -121,7 +121,13 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/teslamate"
-config_files = [{ path = "dump.sh", requires = "redeploy" }]
+config_files = [
+  { path = "dump.sh", requires = "redeploy" },
+  # Grafana re-reads its provisioning on restart.
+  { path = "grafana/provisioning/dashboards-homelab.yml", requires = "restart", services = ["grafana"] },
+  { path = "grafana/provisioning/datasources-homelab.yml", requires = "restart", services = ["grafana"] },
+  { path = "grafana/dashboards/visited-all-cars.json", requires = "restart", services = ["grafana"] },
+]
 pre_deploy.path = "."
 pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"
 # Reload Ofelia's jobs (teslamate-dump). On a fresh rebuild the backup stack

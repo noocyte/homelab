@@ -19,6 +19,8 @@
 #   /srv/teslamate/import              TeslaFi import folder
 #   /srv/teslamate/osrm-data           preprocessed Norway map (see osrm-setup.sh)
 #   /srv/teslamate/custom-dashboards   git clone of jheredianet/Teslamate-CustomGrafanaDashboards
+#
+# Grafana dashboards we made ourselves live in git: grafana/dashboards/.
 #   /mnt/bigbackup/teslamate           nightly pg_dumps (ZFS, 14 days) - see dump.sh
 
 services:
@@ -86,6 +88,12 @@ services:
       - /srv/teslamate/grafana:/var/lib/grafana
       - /srv/teslamate/custom-dashboards/customdashboards.yml:/etc/grafana/provisioning/dashboards/customdashboards.yml:ro
       - /srv/teslamate/custom-dashboards/dashboards:/TeslamateCustomDashboards:ro
+      # Our own dashboards + MG4 data source, from git (see grafana/provisioning/).
+      # The .yml files are single-file mounts: a restart re-reads them after a
+      # git pull (config_files in stacks.toml does that).
+      - ./grafana/provisioning/dashboards-homelab.yml:/etc/grafana/provisioning/dashboards/homelab.yml:ro
+      - ./grafana/provisioning/datasources-homelab.yml:/etc/grafana/provisioning/datasources/homelab.yml:ro
+      - ./grafana/dashboards:/homelab-dashboards:ro
 
   abrp:
     container_name: TeslaMate_ABRP
