@@ -3,12 +3,14 @@
 # Host paths:
 #   /srv/rclone/rclone.conf   rclone config incl. crypt password (restore from password manager)
 #   /mnt/immich               Immich library (virtiofs, read-only)
-#   /srv/backups              DB dumps etc. (Komodo DB backups)
-#   /mnt/bigbackup            ZFS backups share on Proxmox (NFS), read-only here:
-#     teslamate/              TeslaMate pg_dumps (written 02:30 by the teslamate stack)
-#     automatic_backup_*.tar  Home Assistant backups (HA writes them via LXC 100's Samba)
-#     proxmox/dump/           weekly vzdump images of LXC 100 + VM 102 (Sun 01:00)
-#     proxmox/host/           Proxmox host config tarballs (01:30, proxmox/pve-config-backup.sh)
+#   /mnt/backups              ZFS backups share on Proxmox (NFS). Every service
+#                             writes its own backups there, one folder each:
+#     komodo/            Komodo DB (01:00, Komodo procedure)
+#     teslamate/         pg_dumps (02:30, compose/teslamate/dump.sh)
+#     trip-planner/      DB copy + attachments (02:45, compose/trip-planner/backup-db.py)
+#     victoriametrics/   vmbackup, incremental (02:50, compose/victoriametrics)
+#     homeassistant/     HA backups (~05:30, HA network storage "NASBACKUP", NFS)
+#     proxmox/           vzdump images (Sun 01:00) + host config (01:30), see proxmox/
 #
 # backup.sh is mounted via its folder: Komodo clones this repo onto the host
 # under /etc/komodo/stacks/, so ./backup.sh exists on the host.
@@ -35,10 +37,7 @@ services:
     volumes:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
-      - /srv/backups:/sources/dumps:ro
-      - /mnt/bigbackup:/sources/bigbackup:ro   # ZFS backups share (see above)
-      - /srv/trip-planner/storage:/sources/trip-planner:ro
-      - /srv/victoriametrics:/sources/victoriametrics:ro
+      - /mnt/backups:/sources/backups:ro
       # Folder, not single file: a single-file bind mount keeps pointing at the
       # old file after git pull replaces it.
       - .:/scripts:ro

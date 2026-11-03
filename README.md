@@ -82,7 +82,7 @@ Notes:
 
 ```sh
 ssh core@192.168.0.240
-systemctl status komodo mnt-bigbackup.mount mnt-immich.mount
+systemctl status komodo mnt-backups.mount mnt-immich.mount
 docker ps
 ```
 
@@ -107,7 +107,7 @@ deploying the app, or stop it first.
 | App | Restore from |
 |---|---|
 | backup | `rclone.conf` → `/srv/rclone/rclone.conf` (mode 600). The crypt password is in the password manager; the Jottacloud token can be recreated with `rclone config`. |
-| trip-planner | `trip-planner-storage.tar.gz` → extract into `/srv/trip-planner/` |
+| trip-planner | a dated folder from `/mnt/backups/trip-planner/` → `/srv/trip-planner/storage/`, see `backup-db.py` |
 | crafty | `/srv/crafty/` |
 | teslamate | Postgres dump (`pg_dump`) → restore into the `database` service, see "Migrating TeslaMate" |
 
@@ -155,21 +155,28 @@ embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 
 ## Backups
 
-| What | When | Where | Kept |
+Every service writes its own backups to **one place**: the ZFS share
+`/storage/shares/backups` on Proxmox (raidz1), mounted on the docker VM as
+`/mnt/backups` (NFS), one folder per service. At 03:00 the `backup` stack
+mirrors each folder, encrypted, to Jottacloud `jottacrypt:<folder>`. History
+lives in the folders themselves (dated files), so Jotta is a plain mirror.
+Immich is the exception: its library and DB dumps are synced straight from
+`storage/immich`.
+
+| Folder (`/mnt/backups/…`) | What | Written by, when | Kept |
 |---|---|---|---|
-| TeslaMate DBs (`teslamate`, `mg_ismart`), `pg_dump -Fc` | 02:30 (UTC in file names) | ZFS: `/storage/shares/backups/teslamate` (VM: `/mnt/bigbackup/teslamate`) | 14 days |
-| ↳ same files, encrypted | 03:00 | Jottacloud `jottacrypt:teslamate` | mirror of the above |
-| Immich library + DB backups | 03:00 | Jottacloud `jottacrypt:immich` | changed/deleted files kept in `archive/<date>` |
-| Komodo DB (users, API keys, secret variables) | 01:00, Komodo's "Backup Core Database" procedure | `/srv/backups/komodo` → Jottacloud `jottacrypt:dumps` at 03:00 | changed/deleted files kept in `archive/<date>` |
-| Trip planner DB, consistent copy (`backup-db.py`) | 02:45 | `/srv/trip-planner/storage/backups/trip-nightly.sqlite` | latest only |
-| ↳ whole storage folder (DB copy, images, config), encrypted | 03:00 | Jottacloud `jottacrypt:trip-planner` | changed/deleted files kept in `archive/<date>` |
-| VictoriaMetrics snapshot (`snapshot.sh`) | 02:50 | `/srv/victoriametrics/snapshots/` | newest only |
-| ↳ same snapshot, encrypted | 03:00 | Jottacloud `jottacrypt:victoriametrics` | mirror of the above |
-| Home Assistant backups (encrypted by HA, ~1.5 GB each) | ~04:30, by HA | ZFS: `/storage/shares/backups/automatic_backup_*.tar` (HA → LXC 100 Samba) | HA keeps ~10 |
-| ↳ same files | 03:00 | Jottacloud `jottacrypt:homeassistant` | mirror of the above |
-| VM 102 `plex-enc` + LXC 100 `nas-server`, whole images (vzdump, zstd) | Sun 01:00, Proxmox backup job | ZFS: `/storage/shares/backups/proxmox/dump` (Proxmox storage `backups-proxmox`) | 2 per guest |
-| Proxmox host config (`proxmox/pve-config-backup.sh`) | 01:30, cron on the host | ZFS: `/storage/shares/backups/proxmox/host` | 14 days |
-| ↳ both of the above | 03:00 | Jottacloud `jottacrypt:proxmox` | mirror of the above |
+| `komodo/` | Komodo DB (users, API keys, secret variables) | Komodo's "Backup Core Database" procedure, 01:00 | Komodo's setting |
+| `teslamate/` | `teslamate` + `mg_ismart`, `pg_dump -Fc` | `compose/teslamate/dump.sh`, 02:30 (UTC in names) | 14 days |
+| `trip-planner/<date>/` | DB copy + attachments, assets, config | `compose/trip-planner/backup-db.py`, 02:45 | 14 days |
+| `victoriametrics/latest/` | Full DB, incremental | `vmbackup` sidecar, 02:50 | latest only |
+| `homeassistant/` | HA backups (encrypted by HA, ~1.5 GB each) | HA, ~05:30, over NFS (HA network storage `NASBACKUP`) | HA keeps 10 |
+| `proxmox/dump/` | VM 102 + LXC 100 whole images (vzdump, zstd) | Proxmox backup job, Sun 01:00 | 2 per guest |
+| `proxmox/host/` | Proxmox host config | `proxmox/pve-config-backup.sh`, 01:30 | 14 days |
+| *(Immich)* | library + Immich's DB dumps | Immich; synced from `/mnt/immich` | changed/deleted kept in `jottacrypt:archive/immich/<date>` |
+
+All the jobs refuse to write if the share isn't mounted (nothing lands on
+the VM's own disk), and `backup.sh` skips the mirror then, so an empty mount
+can't wipe Jotta.
 
 **Keys needed to restore** (password manager): the rclone crypt password
 *and* salt (`password`/`password2` in `rclone.conf`; without them nothing on
@@ -181,10 +188,9 @@ Not backed up: `/storage/shares/media`, `/storage/shares/public`,
 this repo rather than imaged.
 
 Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
-the containers. The TeslaMate dump refuses to run if the ZFS share isn't
-mounted.
+the containers.
 
-Ofelia reads the labels only when it starts. The backup and teslamate stacks
+Ofelia reads the labels only when it starts. Stacks with backup jobs
 restart `backup-scheduler` after each deploy (`post_deploy` in
 `komodo/sync/stacks.toml`). If you change `ofelia.*` labels some other way,
 restart `backup-scheduler` yourself and check its log for
@@ -265,8 +271,8 @@ Restart HA, then check in VictoriaMetrics' UI (`http://192.168.0.240:8428/vmui`)
 with the query `{entity_id=~".+"}`. Only numeric values are stored; text
 states and text attributes are dropped.
 
-Restore: stop the stack, copy the snapshot from `jottacrypt:victoriametrics`
-into `/srv/victoriametrics` (it *is* a complete storage folder), start it.
+Restore: `vmrestore` from `/mnt/backups/victoriametrics/latest` (or its copy
+in `jottacrypt:victoriametrics`), see `compose/victoriametrics/compose.yaml`.
 
 ## UniFi statistics (unpoller)
 

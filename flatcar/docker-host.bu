@@ -22,10 +22,6 @@ storage:
       mode: 0755
     - path: /srv
       mode: 0755
-    - path: /srv/backups
-      mode: 0755
-    - path: /srv/backups/komodo
-      mode: 0755
     - path: /srv/rclone
       mode: 0700
 
@@ -88,8 +84,9 @@ systemd:
     - name: docker.service
       enabled: true
 
-    # ZFS backups share on the Proxmox host (NFS).
-    - name: mnt-bigbackup.mount
+    # ZFS backups share on the Proxmox host (NFS). Every local backup lands
+    # here, one folder per service; the backup stack mirrors it to Jotta.
+    - name: mnt-backups.mount
       enabled: true
       contents: |
         [Unit]
@@ -99,7 +96,7 @@ systemd:
 
         [Mount]
         What=192.168.0.107:/storage/shares/backups
-        Where=/mnt/bigbackup
+        Where=/mnt/backups
         Type=nfs4
         Options=noatime,_netdev,nofail
 

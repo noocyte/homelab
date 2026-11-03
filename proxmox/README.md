@@ -12,12 +12,12 @@ up, so it can be done again on a fresh install. The nightly config tarball
 | ZFS pool `storage` | 4 disks, raidz1, mounted at `/storage`. Datasets `storage/immich` (zstd, atime off; sanoid snapshots), `storage/shares` (+ `media`) |
 | `ssd-pool` | LVM-thin on the SSD: system disks of VM 102, VM 200, LXC 100 |
 | Network | `vmbr0` on `nic0`, 192.168.0.107/24, gw .1 |
-| NFS export | `/storage/shares/backups` → 192.168.0.0/24, `all_squash,anonuid=100000` (VM 200 mounts it as `/mnt/bigbackup`) |
+| NFS export | `/storage/shares/backups` → 192.168.0.0/24, `all_squash,anonuid=100000`. VM 200 mounts it as `/mnt/backups`; Home Assistant mounts its subfolder `homeassistant/` (HA → Settings → System → Storage, `NASBACKUP`) |
 | virtiofs mappings | `immich-fs` → `/storage/immich` (VM 102, VM 200 read-only), `media-fs` → `/storage/shares/media` (VM 102) |
 | GPU passthrough | kernel cmdline `intel_iommu=on iommu=pt`; vfio modules in `/etc/modules`; nouveau/nvidiafb blacklisted. VM 102 `hostpci0: 01:00` |
 | sanoid | `storage/immich`: 48 hourly, 14 daily, 8 weekly, 3 monthly |
 | VM 102 `plex-enc` | Ubuntu 24.04, Immich (`compose/immich/`) + Plex |
-| LXC 100 `nas-server` | Debian 13, Samba (.220): shares `Shares`, `Media`, `Backups`, user `jarle`. Home Assistant writes its backups here |
+| LXC 100 `nas-server` | Debian 13, Samba (.220): shares `Shares`, `Media`, `Backups`, user `jarle` |
 | VM 200 `docker-host` | Flatcar, rebuilt from this repo (see main README) |
 
 ## Backups of the host and its guests
