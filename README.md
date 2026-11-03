@@ -159,6 +159,8 @@ embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 | Komodo DB (users, API keys, secret variables) | 01:00, Komodo's "Backup Core Database" procedure | `/srv/backups/komodo` → Jottacloud `jottacrypt:dumps` at 03:00 | changed/deleted files kept in `archive/<date>` |
 | Trip planner DB, consistent copy (`backup-db.py`) | 02:45 | `/srv/trip-planner/storage/backups/trip-nightly.sqlite` | latest only |
 | ↳ whole storage folder (DB copy, images, config), encrypted | 03:00 | Jottacloud `jottacrypt:trip-planner` | changed/deleted files kept in `archive/<date>` |
+| VictoriaMetrics snapshot (`snapshot.sh`) | 02:50 | `/srv/victoriametrics/snapshots/` | newest only |
+| ↳ same snapshot, encrypted | 03:00 | Jottacloud `jottacrypt:victoriametrics` | mirror of the above |
 
 Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
 the containers. The TeslaMate dump refuses to run if the ZFS share isn't
@@ -191,6 +193,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 4000 / 3000 | TeslaMate / Grafana |
 | 1883 | Mosquitto (MQTT) |
 | 5000 | OSRM |
+| 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
 
 ## Migrating TeslaMate (from serverlite)
@@ -210,6 +213,37 @@ stays untouched until the new instance is verified.
 6. Set `deploy = true` for teslamate in `komodo/sync/stacks.toml`, push,
    execute the sync, and check the TeslaMate UI and Grafana.
 7. Only then stop TeslaMate on serverlite.
+
+## Home Assistant history (VictoriaMetrics)
+
+HA keeps detailed history for 10 days. Numbers we want for years (energy,
+temperatures) also go to VictoriaMetrics (`compose/victoriametrics`), which
+keeps them forever. Grafana reads them through the `VictoriaMetrics` data
+source.
+
+HA side, in `configuration.yaml` on the HA box (not managed from this repo).
+HA's built-in InfluxDB integration, v1 API - VictoriaMetrics accepts it:
+
+```yaml
+influxdb:
+  api_version: 1
+  host: 192.168.0.240
+  port: 8428
+  database: homeassistant
+  # Metric names like sensor__temperature_value / sensor__energy_value,
+  # with an entity_id label - easy to query in Grafana.
+  measurement_attr: domain__device_class
+  include:
+    domains:
+      - sensor
+```
+
+Restart HA, then check in VictoriaMetrics' UI (`http://192.168.0.240:8428/vmui`)
+with the query `{entity_id=~".+"}`. Only numeric values are stored; text
+states and text attributes are dropped.
+
+Restore: stop the stack, copy the snapshot from `jottacrypt:victoriametrics`
+into `/srv/victoriametrics` (it *is* a complete storage folder), start it.
 
 ## Not managed here (yet)
 

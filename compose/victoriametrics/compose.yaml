@@ -1,0 +1,23 @@
+# VictoriaMetrics: long-term time series from Home Assistant (energy,
+# temperatures - numbers only). HA writes with its built-in InfluxDB
+# integration (Influx line protocol on :8428/write), Grafana reads it as a
+# Prometheus data source. See README → "Home Assistant history".
+#
+# Data:   /srv/victoriametrics (kept forever; ~1 byte per value)
+# Backup: snapshot.sh at 02:50, the backup stack ships the snapshot at 03:00.
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.155.0
+    restart: unless-stopped
+    ports:
+      - 8428:8428
+    volumes:
+      - /srv/victoriametrics:/storage
+      - .:/scripts:ro                          # snapshot.sh
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=100y                  # i.e. keep everything
+    labels:
+      ofelia.enabled: "true"
+      ofelia.job-exec.victoriametrics-snapshot.schedule: "0 50 2 * * *"
+      ofelia.job-exec.victoriametrics-snapshot.command: "sh /scripts/snapshot.sh"

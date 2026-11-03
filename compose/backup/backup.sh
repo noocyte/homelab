@@ -61,4 +61,17 @@ else
   log "WARNING: no trip-planner nightly DB copy found, skipping trip-planner"
 fi
 
+# VictoriaMetrics: newest snapshot (made at 02:50 by snapshot.sh). Its
+# data/ entries are relative symlinks into the storage folder, hence
+# --copy-links. Mirror only: the snapshot is the complete database.
+SNAP="$(ls -1 /sources/victoriametrics/snapshots 2>/dev/null | sort | tail -n 1)"
+if [ -n "$SNAP" ]; then
+  log "syncing victoriametrics snapshot $SNAP"
+  rclone sync "/sources/victoriametrics/snapshots/$SNAP" jottacrypt:victoriametrics \
+    --copy-links \
+    --log-level INFO
+else
+  log "WARNING: no victoriametrics snapshot found, skipping victoriametrics"
+fi
+
 log "done"
