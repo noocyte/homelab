@@ -1,7 +1,7 @@
 #!/bin/sh
 # Nightly dump of the TeslaMate databases to the ZFS share on Proxmox.
 # Runs INSIDE the database container (Ofelia job-exec, see compose.yaml).
-# /backups = /mnt/bigbackup/teslamate on the host (NFS → Proxmox ZFS).
+# /backups = /mnt/backups/teslamate on the host (NFS → Proxmox ZFS).
 set -eu
 DIR=/backups
 KEEP_DAYS=14

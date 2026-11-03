@@ -5,7 +5,13 @@
 # Prometheus data source. See README → "Home Assistant history".
 #
 # Data:   /srv/victoriametrics (kept forever; ~1 byte per value)
-# Backup: snapshot.sh at 02:50, the backup stack ships the snapshot at 03:00.
+# Backup: vmbackup at 02:50 → /mnt/backups/victoriametrics/latest (ZFS),
+#         incremental (only changed parts are copied); the backup stack
+#         mirrors it to Jottacloud at 03:00.
+# Restore: stop victoriametrics, then
+#   docker run --rm -v /srv/victoriametrics:/storage -v /mnt/backups/victoriametrics:/backups \
+#     victoriametrics/vmrestore:v1.155.0 -src=fs:///backups/latest -storageDataPath=/storage
+# and start it again.
 services:
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.155.0
@@ -14,7 +20,7 @@ services:
       - 8428:8428
     volumes:
       - /srv/victoriametrics:/storage
-      - .:/scripts:ro                          # snapshot.sh, scrape.yml, relabel.yml
+      - .:/scripts:ro                          # scrape.yml, relabel.yml
     command:
       - -storageDataPath=/storage
       - -retentionPeriod=100y                  # i.e. keep everything
@@ -24,7 +30,21 @@ services:
       # Identical samples (same series + timestamp) are stored once, so
       # imports/backfills can safely be re-run.
       - -dedup.minScrapeInterval=1ms
+
+  # Idle; Ofelia runs vmbackup in it nightly. vmbackup asks victoriametrics
+  # for a snapshot, copies what changed since the last run, and deletes the
+  # snapshot again. Refuses to run if the ZFS share isn't mounted.
+  vmbackup:
+    image: victoriametrics/vmbackup:v1.155.0
+    restart: unless-stopped
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - /srv/victoriametrics:/storage:ro
+      - /mnt/backups/victoriametrics:/backups  # ZFS share (NFS)
     labels:
       ofelia.enabled: "true"
-      ofelia.job-exec.victoriametrics-snapshot.schedule: "0 50 2 * * *"
-      ofelia.job-exec.victoriametrics-snapshot.command: "sh /scripts/snapshot.sh"
+      ofelia.job-exec.victoriametrics-backup.schedule: "0 50 2 * * *"
+      ofelia.job-exec.victoriametrics-backup.command: >-
+        sh -c 'grep -q " /backups nfs" /proc/mounts || { echo "/backups is not the NFS share, aborting" >&2; exit 1; };
+        /vmbackup-prod -storageDataPath=/storage -dst=fs:///backups/latest
+        -snapshot.createURL=http://victoriametrics:8428/snapshot/create'

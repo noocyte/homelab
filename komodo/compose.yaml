@@ -44,8 +44,8 @@ services:
       KOMODO_DATABASE_ADDRESS: ferretdb:27017
     volumes:
       - keys:/config/keys
-      # Dated DB backups land here; the backup stack ships /srv/backups offsite.
-      - /srv/backups/komodo:/backups
+      # Dated DB backups (ZFS share); the backup stack ships them offsite.
+      - /mnt/backups/komodo:/backups
 
   periphery:
     image: ghcr.io/moghtech/komodo-periphery:2.3.4

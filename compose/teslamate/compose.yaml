@@ -21,7 +21,7 @@
 #   /srv/teslamate/custom-dashboards   git clone of jheredianet/Teslamate-CustomGrafanaDashboards
 #
 # Grafana dashboards we made ourselves live in git: grafana/dashboards/.
-#   /mnt/bigbackup/teslamate           nightly pg_dumps (ZFS, 14 days) - see dump.sh
+#   /mnt/backups/teslamate             nightly pg_dumps (ZFS, 14 days) - see dump.sh
 
 services:
   teslamate:
@@ -65,7 +65,7 @@ services:
       - POSTGRES_DB=teslamate
     volumes:
       - /srv/teslamate/postgres:/var/lib/postgresql/data
-      - /mnt/bigbackup/teslamate:/backups      # ZFS share (NFS)
+      - /mnt/backups/teslamate:/backups        # ZFS share (NFS)
       - .:/scripts:ro                          # dump.sh
     labels:
       # Nightly dump to ZFS at 02:30; the backup stack ships it offsite at 03:00.
