@@ -26,6 +26,10 @@ Proxmox (192.168.0.107, "pve")             ← managed by hand, NOT updated (NVI
 
 ## Rebuilding the docker VM from scratch
 
+The whole Proxmox host gone? Start with
+[docs/disaster-recovery.md](docs/disaster-recovery.md); it tells you when to
+come here.
+
 Run on your desktop, in this repo, unless the step says *Proxmox shell*.
 
 ### 1. Build the Ignition config
