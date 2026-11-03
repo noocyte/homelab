@@ -4,7 +4,11 @@
 #   /srv/rclone/rclone.conf   rclone config incl. crypt password (restore from password manager)
 #   /mnt/immich               Immich library (virtiofs, read-only)
 #   /srv/backups              DB dumps etc. (Komodo DB backups)
-#   /mnt/bigbackup/teslamate  TeslaMate pg_dumps (written 02:30 by the teslamate stack)
+#   /mnt/bigbackup            ZFS backups share on Proxmox (NFS), read-only here:
+#     teslamate/              TeslaMate pg_dumps (written 02:30 by the teslamate stack)
+#     automatic_backup_*.tar  Home Assistant backups (HA writes them via LXC 100's Samba)
+#     proxmox/dump/           weekly vzdump images of LXC 100 + VM 102 (Sun 01:00)
+#     proxmox/host/           Proxmox host config tarballs (01:30, proxmox/pve-config-backup.sh)
 #
 # backup.sh is mounted via its folder: Komodo clones this repo onto the host
 # under /etc/komodo/stacks/, so ./backup.sh exists on the host.
@@ -32,7 +36,7 @@ services:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
       - /srv/backups:/sources/dumps:ro
-      - /mnt/bigbackup/teslamate:/sources/teslamate:ro   # TeslaMate dumps on ZFS
+      - /mnt/bigbackup:/sources/bigbackup:ro   # ZFS backups share (see above)
       - /srv/trip-planner/storage:/sources/trip-planner:ro
       - /srv/victoriametrics:/sources/victoriametrics:ro
       # Folder, not single file: a single-file bind mount keeps pointing at the

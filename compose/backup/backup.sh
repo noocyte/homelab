@@ -36,13 +36,43 @@ if [ -d /sources/dumps ] && [ -n "$(ls -A /sources/dumps 2>/dev/null)" ]; then
     --log-level INFO
 fi
 
-# TeslaMate dumps (written to ZFS at 02:30). Mirror only: retention is
-# handled by dump.sh (14 days), so no --backup-dir archive here.
-if [ -n "$(ls -A /sources/teslamate 2>/dev/null)" ]; then
-  log "syncing teslamate dumps"
-  rclone sync /sources/teslamate jottacrypt:teslamate \
-    --include '*.dump' \
-    --log-level INFO
+BIG=/sources/bigbackup   # ZFS backups share on Proxmox (NFS)
+if ! [ -d "$BIG/teslamate" ]; then
+  # Never mirror an empty/unmounted share: rclone sync would delete the
+  # off-site copies.
+  log "WARNING: $BIG not mounted, skipping teslamate, homeassistant, proxmox"
+else
+  # TeslaMate dumps (written at 02:30). Mirror only: retention is handled
+  # by dump.sh (14 days), so no --backup-dir archive here.
+  if [ -n "$(ls -A "$BIG/teslamate" 2>/dev/null)" ]; then
+    log "syncing teslamate dumps"
+    rclone sync "$BIG/teslamate" jottacrypt:teslamate \
+      --include '*.dump' \
+      --log-level INFO
+  fi
+
+  # Home Assistant backups (encrypted by HA; key in the password manager).
+  # HA keeps the newest ~10 itself, so mirror.
+  if ls "$BIG"/automatic_backup_*.tar >/dev/null 2>&1; then
+    log "syncing home assistant backups"
+    rclone sync "$BIG" jottacrypt:homeassistant \
+      --include '/automatic_backup_*.tar' \
+      --log-level INFO
+  else
+    log "WARNING: no home assistant backups found, skipping"
+  fi
+
+  # Proxmox: weekly vzdump images (Sun 01:00, Proxmox keeps 2) and the
+  # nightly host config tarballs (14 kept). Mirror; skip files vzdump is
+  # still writing (*.dat, *.tmp/).
+  if [ -d "$BIG/proxmox" ]; then
+    log "syncing proxmox"
+    rclone sync "$BIG/proxmox" jottacrypt:proxmox \
+      --exclude '*.dat' \
+      --exclude '*.tmp/**' \
+      --exclude '*.part' \
+      --log-level INFO
+  fi
 fi
 
 # Trip planner: whole storage folder (images, config, nightly DB copy made

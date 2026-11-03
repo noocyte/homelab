@@ -165,6 +165,20 @@ embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
 | ↳ whole storage folder (DB copy, images, config), encrypted | 03:00 | Jottacloud `jottacrypt:trip-planner` | changed/deleted files kept in `archive/<date>` |
 | VictoriaMetrics snapshot (`snapshot.sh`) | 02:50 | `/srv/victoriametrics/snapshots/` | newest only |
 | ↳ same snapshot, encrypted | 03:00 | Jottacloud `jottacrypt:victoriametrics` | mirror of the above |
+| Home Assistant backups (encrypted by HA, ~1.5 GB each) | ~04:30, by HA | ZFS: `/storage/shares/backups/automatic_backup_*.tar` (HA → LXC 100 Samba) | HA keeps ~10 |
+| ↳ same files | 03:00 | Jottacloud `jottacrypt:homeassistant` | mirror of the above |
+| VM 102 `plex-enc` + LXC 100 `nas-server`, whole images (vzdump, zstd) | Sun 01:00, Proxmox backup job | ZFS: `/storage/shares/backups/proxmox/dump` (Proxmox storage `backups-proxmox`) | 2 per guest |
+| Proxmox host config (`proxmox/pve-config-backup.sh`) | 01:30, cron on the host | ZFS: `/storage/shares/backups/proxmox/host` | 14 days |
+| ↳ both of the above | 03:00 | Jottacloud `jottacrypt:proxmox` | mirror of the above |
+
+**Keys needed to restore** (password manager): the rclone crypt password
+*and* salt (`password`/`password2` in `rclone.conf`; without them nothing on
+Jotta can be read) and Home Assistant's backup encryption key (HA →
+Settings → System → Backups → emergency kit).
+
+Not backed up: `/storage/shares/media`, `/storage/shares/public`,
+`/storage/shares/backups/From NAS`. VM 200 (docker-host) is rebuilt from
+this repo rather than imaged.
 
 Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
 the containers. The TeslaMate dump refuses to run if the ZFS share isn't
@@ -270,4 +284,5 @@ Its password is the Komodo secret `UNPOLLER_UNIFI_PASS`.
 ## Not managed here (yet)
 
 - `compose/immich/` runs on VM 102 (`plex-enc`), deployed by hand.
-- Proxmox host config, UniFi (see issue #7).
+- Proxmox host: set up by hand; what was changed, and its backups, are in
+  `proxmox/README.md`. UniFi (see issue #7).

@@ -1,0 +1,16 @@
+#!/bin/sh
+# VM 102: flag a reboot when the NVIDIA driver on disk no longer matches the
+# loaded kernel module (after an apt/unattended upgrade). Without the reboot
+# the GPU is unusable ("Driver/library version mismatch") - this kept Plex
+# down for 3 months in 2026. Unattended-upgrades then reboots at the time in
+# 52homelab-auto-reboot.
+# Installed as /usr/local/sbin/nvidia-reboot-check, run by an apt hook.
+[ -r /proc/driver/nvidia/version ] || exit 0
+loaded=$(sed -n 's/.*Kernel Module[^0-9]*\([0-9][0-9.]*\).*/\1/p' /proc/driver/nvidia/version)
+ondisk=$(modinfo -F version nvidia 2>/dev/null)
+if [ -n "$ondisk" ] && [ -n "$loaded" ] && [ "$loaded" != "$ondisk" ]; then
+  echo "nvidia-reboot-check: driver $ondisk installed, $loaded loaded - reboot required"
+  touch /var/run/reboot-required
+  grep -qx nvidia /var/run/reboot-required.pkgs 2>/dev/null || echo nvidia >> /var/run/reboot-required.pkgs
+fi
+exit 0

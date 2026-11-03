@@ -1,0 +1,8 @@
+// VM 102 (homelab repo: proxmox/vm102/). Installed in /etc/apt/apt.conf.d/.
+// Reboot after unattended upgrades when needed (kernel, NVIDIA driver -
+// see nvidia-reboot-check), at 04:00 UTC = 05:00/06:00 Norway.
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "04:00";
+
+DPkg::Post-Invoke { "/usr/local/sbin/nvidia-reboot-check || true"; };
