@@ -1,4 +1,5 @@
 # TRIP - trip planner. Data: /srv/trip-planner/storage (sqlite + attachments)
+# Backup: backup-db.py at 02:45, then storage/ → Jottacloud at 03:00.
 services:
   app:
     image: ghcr.io/itskovacs/trip:1
@@ -7,4 +8,11 @@ services:
       - 8300:8000
     volumes:
       - /srv/trip-planner/storage:/app/storage
+      - .:/scripts:ro                          # backup-db.py
     command: ["fastapi", "run", "/app/trip/main.py", "--host", "0.0.0.0"]
+    labels:
+      # Nightly consistent DB copy into storage/backups; the backup stack
+      # ships storage/ offsite at 03:00.
+      ofelia.enabled: "true"
+      ofelia.job-exec.trip-db-backup.schedule: "0 45 2 * * *"
+      ofelia.job-exec.trip-db-backup.command: "python /scripts/backup-db.py"

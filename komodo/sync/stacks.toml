@@ -81,6 +81,9 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/trip-planner"
+config_files = [{ path = "backup-db.py", requires = "redeploy" }]
+# Reload Ofelia's jobs (trip-db-backup).
+post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
 
 [[stack]]
 name = "weatherrouter"
