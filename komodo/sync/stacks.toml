@@ -198,6 +198,9 @@ config_files = [
   { path = "grafana/dashboards/unifi/usw.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/pihole/pihole-exporter.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/proxmox/proxmox-via-prometheus.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/energy/energy-now.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/energy/energy-weather.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/energy/energy-cost.json", requires = "redeploy", services = ["grafana"] },
 ]
 pre_deploy.path = "."
 pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"

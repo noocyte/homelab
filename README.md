@@ -313,6 +313,14 @@ states and text attributes are dropped.
 Restore: `vmrestore` from `/mnt/backups/victoriametrics/latest` (or its copy
 in `jottacrypt:victoriametrics`), see `compose/victoriametrics/compose.yaml`.
 
+Dashboards from this data: Grafana folder **Energy**
+(`compose/teslamate/grafana/dashboards/energy/`) - *Now* (live power, today,
+capacity tariff), *Consumption vs weather* (daily kWh vs outdoor temperature,
+heating curve) and *Price and cost* (per month, paid vs average price, hour
+of day). They use the HA entity ids (Tibber `*_torvmyrvegen_20`, Nord Pool
+NO2, Easee, `utetemperatur`); renaming those in HA breaks the panels. Costs
+are Tibber's energy cost - grid tariff (nettleie) is not included.
+
 ## UniFi statistics (unpoller)
 
 `compose/unpoller` reads the UniFi controller (UDR Ultra, 192.168.0.1) with

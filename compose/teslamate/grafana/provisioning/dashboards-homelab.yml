@@ -50,3 +50,15 @@ providers:
     updateIntervalSeconds: 60
     options:
       path: /homelab-dashboards/proxmox
+
+  # Energy dashboards built from Home Assistant data (Tibber Pulse, Nord Pool,
+  # Easee, outdoor temperature) in VictoriaMetrics.
+  - name: homelab-energy
+    orgId: 1
+    folder: Energy
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards/energy
