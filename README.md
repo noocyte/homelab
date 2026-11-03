@@ -243,6 +243,9 @@ influxdb:
       - sensor
 ```
 
+HA also sends every attribute as its own series; `relabel.yml` drops all but
+the `*_value` series on arrival.
+
 Restart HA, then check in VictoriaMetrics' UI (`http://192.168.0.240:8428/vmui`)
 with the query `{entity_id=~".+"}`. Only numeric values are stored; text
 states and text attributes are dropped.
