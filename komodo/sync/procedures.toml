@@ -1,0 +1,40 @@
+# GitOps loop: merging to main is the deployment.
+#
+# Every 5 minutes (except 02:00-03:59, when the TeslaMate dump and the
+# offsite backup run):
+#   1. RunSync homelab      applies changes in komodo/sync/*.toml
+#                           (and deploys stacks with deploy = true whose
+#                           definition changed)
+#   2. DeployStackIfChanged compares each stack's files in git with what was
+#                           last deployed, and deploys only if they differ.
+#                           Files that count: compose.yaml plus the
+#                           stack's `config_files` in stacks.toml.
+#
+# The stack list is explicit on purpose: a stack that has never been deployed
+# (crafty) counts as "changed" and would be started. Add crafty here once
+# /srv/crafty is migrated.
+
+[[procedure]]
+name = "homelab-gitops"
+description = "Every 5 min: apply komodo/sync, then deploy stacks whose files changed in git"
+tags = ["infra"]
+[procedure.config]
+schedule_format = "Cron"
+# sec min hour day month weekday - skips 02:00-03:59
+schedule = "0 */5 0-1,4-23 * * *"
+schedule_timezone = "Europe/Oslo"
+schedule_enabled = true
+schedule_alert = false   # would alert every 5 minutes
+failure_alert = true
+
+[[procedure.config.stage]]
+name = "Sync"
+executions = [
+  { execution.type = "RunSync", execution.params.sync = "homelab" },
+]
+
+[[procedure.config.stage]]
+name = "Deploy changed stacks"
+executions = [
+  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "backup, pihole, cloudflare-ddns, cloudflared, trip-planner, weatherrouter, teslamate" },
+]

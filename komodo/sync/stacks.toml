@@ -7,6 +7,12 @@
 # deploy = true  → the sync deploys the stack if it isn't running or its
 #                  config changed.
 #
+# config_files   → extra files (besides compose.yaml) that the homelab-gitops
+#                  procedure (procedures.toml) diffs against the last deploy.
+#                  "redeploy" = docker compose up -d: git is pulled, only
+#                  containers whose config changed are recreated, and
+#                  post_deploy runs.
+#
 # Ofelia (backup-scheduler) reads the ofelia.* job labels only when it starts.
 # Stacks that carry such labels (backup, teslamate) restart it after every
 # deploy, so changed schedules/commands are picked up. Ofelia waits for a
@@ -21,6 +27,7 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/backup"
+config_files = [{ path = "backup.sh", requires = "redeploy" }]
 post_deploy.command = "docker restart backup-scheduler"
 
 [[stack]]
@@ -32,6 +39,7 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/pihole"
+config_files = [{ path = "lists.sh", requires = "redeploy" }]
 environment = """
 PIHOLE_ADMIN_PASSWORD = [[PIHOLE_ADMIN_PASSWORD]]
 """
@@ -110,6 +118,7 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/teslamate"
+config_files = [{ path = "dump.sh", requires = "redeploy" }]
 pre_deploy.path = "."
 pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"
 # Reload Ofelia's jobs (teslamate-dump). On a fresh rebuild the backup stack
