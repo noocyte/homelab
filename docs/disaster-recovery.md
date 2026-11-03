@@ -209,4 +209,6 @@ emergency kit. (HA also keeps copies in Nabu Casa cloud and OneDrive.)
 ## Not recoverable
 
 Not backed up anywhere off-site: `/storage/shares/media` (Plex library),
-`/storage/shares/public`, and `/storage/shares/backups/From NAS`.
+`/storage/shares/public`, `/storage/shares/rips` and `/storage/shares/emu`.
+The personal archive (`/storage/shares/archive`) comes back with
+`rclone copy jottacrypt:personal-archive /storage/shares/archive`.
