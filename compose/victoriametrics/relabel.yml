@@ -1,0 +1,10 @@
+# Applied to everything VictoriaMetrics receives (-relabelConfig).
+# Re-read every minute (-relabelConfigCheckInterval), so a change here only
+# needs the git pull that homelab-gitops does.
+
+# Home Assistant's InfluxDB integration sends every attribute of every sensor
+# as its own series (friendly_name_str, icon_str, min, max, ...). Keep only
+# the sensor values: <domain>__<device_class>_value, e.g.
+# sensor__temperature_value{entity_id="..."}.
+- action: drop
+  if: '{db="homeassistant", __name__!~".+_value"}'

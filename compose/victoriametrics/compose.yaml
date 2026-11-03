@@ -14,12 +14,17 @@ services:
       - 8428:8428
     volumes:
       - /srv/victoriametrics:/storage
-      - .:/scripts:ro                          # snapshot.sh, scrape.yml
+      - .:/scripts:ro                          # snapshot.sh, scrape.yml, relabel.yml
     command:
       - -storageDataPath=/storage
       - -retentionPeriod=100y                  # i.e. keep everything
       - -promscrape.config=/scripts/scrape.yml # UniFi via unpoller
       - -promscrape.configCheckInterval=1m
+      - -relabelConfig=/scripts/relabel.yml    # drop HA attribute noise
+      - -relabelConfigCheckInterval=1m
+      # Identical samples (same series + timestamp) are stored once, so
+      # imports/backfills can safely be re-run.
+      - -dedup.minScrapeInterval=1ms
     labels:
       ofelia.enabled: "true"
       ofelia.job-exec.victoriametrics-snapshot.schedule: "0 50 2 * * *"

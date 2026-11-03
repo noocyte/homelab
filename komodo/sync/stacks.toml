@@ -118,6 +118,7 @@ run_directory = "compose/victoriametrics"
 config_files = [
   { path = "snapshot.sh", requires = "redeploy" },
   { path = "scrape.yml", requires = "redeploy" },   # re-read within a minute
+  { path = "relabel.yml", requires = "redeploy" },  # re-read within a minute
 ]
 # Reload Ofelia's jobs (victoriametrics-snapshot).
 post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
