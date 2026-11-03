@@ -112,7 +112,7 @@ deploying the app, or stop it first.
 |---|---|
 | backup | `rclone.conf` → `/srv/rclone/rclone.conf` (mode 600). The crypt password is in the password manager; the Jottacloud token can be recreated with `rclone config`. |
 | trip-planner | a dated folder from `/mnt/backups/trip-planner/` → `/srv/trip-planner/storage/`, see `backup-db.py` |
-| crafty | `/srv/crafty/` |
+| crafty | newest `/mnt/backups/crafty/nightly/crafty-<date>.tar.gz` → `/srv/crafty`, see `compose/crafty/backup.py` |
 | teslamate | Postgres dump (`pg_dump`) → restore into the `database` service, see "Migrating TeslaMate" |
 
 ---
@@ -176,6 +176,8 @@ Immich is the exception: its library and DB dumps are synced straight from
 | `homeassistant/` | HA backups (encrypted by HA, ~1.5 GB each) | HA, ~05:30, over NFS (HA network storage `NASBACKUP`) | HA keeps 10 |
 | `proxmox/dump/` | VM 102 + LXC 100 whole images (vzdump, zstd) | Proxmox backup job, Sun 01:00 | 2 per guest |
 | `onedrive/<name>/` | personal OneDrive, one-way copy; deleted/changed files kept 30 days in `onedrive/.deleted/<date>/` | `compose/backup/onedrive.sh`, 02:00 | mirror of OneDrive |
+| `crafty/nightly/` | Crafty DB + config + all Minecraft servers | `compose/crafty/backup.py`, 02:40 | 14 days |
+| `crafty/server-backups/` | Crafty's own per-server backups | Crafty's UI | Crafty's setting |
 | `proxmox/host/` | Proxmox host config | `proxmox/pve-config-backup.sh`, 01:30 | 14 days |
 | *(Immich)* | library + Immich's DB dumps | Immich; synced from `/mnt/immich` | changed/deleted kept in `jottacrypt:archive/immich/<date>` |
 
