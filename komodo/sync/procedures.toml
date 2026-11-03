@@ -36,5 +36,5 @@ executions = [
 [[procedure.config.stage]]
 name = "Deploy changed stacks"
 executions = [
-  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "backup, pihole, cloudflare-ddns, cloudflared, trip-planner, weatherrouter, teslamate" },
+  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "backup, pihole, cloudflare-ddns, cloudflared, trip-planner, weatherrouter, teslamate, victoriametrics" },
 ]

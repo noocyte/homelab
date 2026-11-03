@@ -103,6 +103,19 @@ ROUTER_DATEX_PASSWORD = [[ROUTER_DATEX_PASSWORD]]
 """
 
 [[stack]]
+name = "victoriametrics"
+deploy = true
+tags = ["infra"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/victoriametrics"
+config_files = [{ path = "snapshot.sh", requires = "redeploy" }]
+# Reload Ofelia's jobs (victoriametrics-snapshot).
+post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
+
+[[stack]]
 name = "crafty"
 deploy = false   # true after /srv/crafty is migrated from serverlite
 tags = ["apps"]

@@ -17,3 +17,15 @@ datasources:
       sslmode: disable
       postgresVersion: 1500
     editable: false
+
+  # Home Assistant history (compose/victoriametrics). VictoriaMetrics speaks
+  # the Prometheus query API; queries use PromQL/MetricsQL.
+  - name: VictoriaMetrics
+    uid: victoriametrics
+    type: prometheus
+    access: proxy
+    url: http://192.168.0.240:8428
+    jsonData:
+      httpMethod: POST
+      timeInterval: 30s
+    editable: false
