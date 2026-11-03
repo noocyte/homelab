@@ -158,6 +158,17 @@ Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
 the containers. The TeslaMate dump refuses to run if the ZFS share isn't
 mounted.
 
+Ofelia reads the labels only when it starts. The backup and teslamate stacks
+restart `backup-scheduler` after each deploy (`post_deploy` in
+`komodo/sync/stacks.toml`). If you change `ofelia.*` labels some other way,
+restart `backup-scheduler` yourself and check its log for
+`New job registered`.
+
+**Is a backup running?** `backup-scheduler` log: a `Started` line with no
+`Finished` after it means yes. To be sure (also catches manual runs), run `ps`
+in the `rclone-backup` terminal and look for `backup.sh` / `rclone sync`. Avoid
+redeploying the backup stack between 02:30 and ~03:15.
+
 **Restore TeslaMate** (tested 2026-11-02): start an empty `postgres:17`,
 `createdb mg_ismart`, then `pg_restore -d teslamate <dump>` and
 `pg_restore -d mg_ismart <dump>`.

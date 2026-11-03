@@ -5,7 +5,12 @@
 # in README.md → "Secrets".
 #
 # deploy = true  → the sync deploys the stack if it isn't running or its
-#                  config changed. TeslaMate is false until its DB is restored.
+#                  config changed.
+#
+# Ofelia (backup-scheduler) reads the ofelia.* job labels only when it starts.
+# Stacks that carry such labels (backup, teslamate) restart it after every
+# deploy, so changed schedules/commands are picked up. Ofelia waits for a
+# running job before it stops.
 
 [[stack]]
 name = "backup"
@@ -16,6 +21,7 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/backup"
+post_deploy.command = "docker restart backup-scheduler"
 
 [[stack]]
 name = "pihole"
@@ -47,7 +53,7 @@ CLOUDFLARE_API_TOKEN = [[CLOUDFLARE_API_TOKEN]]
 
 [[stack]]
 name = "cloudflared"
-deploy = false   # true at switchover: two tunnel connectors would split traffic with serverlite
+deploy = true
 tags = ["infra"]
 [stack.config]
 server = "docker-host"
@@ -97,7 +103,7 @@ run_directory = "compose/crafty"
 
 [[stack]]
 name = "teslamate"
-deploy = false   # flip to true after the DB is migrated (see README)
+deploy = true
 tags = ["apps"]
 [stack.config]
 server = "docker-host"
@@ -106,6 +112,9 @@ branch = "main"
 run_directory = "compose/teslamate"
 pre_deploy.path = "."
 pre_deploy.command = "test -d /srv/teslamate/custom-dashboards/.git || git clone --depth 1 https://github.com/jheredianet/Teslamate-CustomGrafanaDashboards.git /srv/teslamate/custom-dashboards"
+# Reload Ofelia's jobs (teslamate-dump). On a fresh rebuild the backup stack
+# may not exist yet; it loads the labels itself when it starts.
+post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
 environment = """
 TESLAMATE_ENCRYPTION_KEY = [[TESLAMATE_ENCRYPTION_KEY]]
 TESLAMATE_DB_PASS = [[TESLAMATE_DB_PASS]]
