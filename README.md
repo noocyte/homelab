@@ -253,6 +253,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
+| 41641/udp | Tailscale (host network) |
 | 8443, 8123, 19132/udp, 25500-25600 | Crafty / Minecraft (router port forwards point here) |
 
 ## Migrating TeslaMate (from serverlite)
@@ -319,6 +320,24 @@ UnPoller's official set (grafana.com 11311-11315), in
 UniFi account: UniFi → Admins & Users → Create New Admin → "Restrict to
 local access only", username `unpoller`, role **View Only** for Network.
 Its password is the Komodo secret `UNPOLLER_UNIFI_PASS`.
+
+## Remote access (Tailscale)
+
+`compose/tailscale` makes the docker VM a Tailscale **subnet router** for
+`192.168.0.0/24` (reach anything on the LAN from a tailnet device) and an
+**exit node** (send a phone's/laptop's internet traffic out through home).
+IPv4 only - the LAN has no public IPv6.
+
+Set up once, by the tailnet owner:
+
+1. First start: `docker logs tailscale` shows a `https://login.tailscale.com/…`
+   link - open it and log in. The login is kept in `/srv/tailscale`.
+2. Admin console → Machines → `docker-host`: **Edit route settings** →
+   approve `192.168.0.0/24` and "Use as exit node"; **⋯ → Disable key expiry**.
+3. Admin console → DNS → split DNS `home.lan` → `192.168.0.240` (Pi-hole), so
+   `*.home.lan` names work over Tailscale.
+
+No router port forward is needed (NAT traversal).
 
 ## Not managed here (yet)
 
