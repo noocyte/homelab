@@ -36,6 +36,9 @@ services:
     environment:
       - RCLONE_CONFIG=/config/rclone.conf
       - TZ=Europe/Oslo
+      # 100 Mbit/s (12 MiB/s) 06:00-00:00, full speed at night - so big
+      # first copies don't slow the house's internet in the daytime.
+      - RCLONE_BWLIMIT=06:00,12M 00:00,off
     volumes:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
@@ -60,6 +63,9 @@ services:
     environment:
       - RCLONE_CONFIG=/config/rclone.conf
       - TZ=Europe/Oslo
+      # 100 Mbit/s (12 MiB/s) 06:00-00:00, full speed at night - so big
+      # first copies don't slow the house's internet in the daytime.
+      - RCLONE_BWLIMIT=06:00,12M 00:00,off
     volumes:
       - /srv/rclone-onedrive:/config          # RW: rclone refreshes the OneDrive tokens
       - /mnt/backups/onedrive:/onedrive

@@ -216,6 +216,10 @@ Not backed up: `/storage/shares/media`, `/storage/shares/public`,
 `/storage/shares/backups/From NAS`. VM 200 (docker-host) is rebuilt from
 this repo rather than imaged.
 
+Bandwidth: both rclone containers are limited to 100 Mbit/s between 06:00
+and 00:00 and run at full speed at night (`RCLONE_BWLIMIT` in
+`compose/backup/compose.yaml`).
+
 Scheduling is Ofelia (in the `backup` stack), driven by `ofelia.*` labels on
 the containers.
 
