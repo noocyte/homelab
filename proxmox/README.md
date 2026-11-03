@@ -61,8 +61,10 @@ Jottacloud (`jottacrypt:proxmox`) every night at 03:00.
   (`nvidia-smi`: "Driver/library version mismatch"); this took Plex down
   from 2026-07-24 until the reboot on 2026-11-03. If Plex or Immich ML acts
   up: check `nvidia-smi`, reboot the VM.
-- Fix (2026-11-03), files in `vm102/`: unattended-upgrades reboots the VM at
-  04:00 UTC when a reboot is required (`52homelab-auto-reboot` →
-  `/etc/apt/apt.conf.d/`). The NVIDIA packages don't flag that themselves,
-  so an apt hook runs `nvidia-reboot-check` (→ `/usr/local/sbin/`), which
-  flags it when the driver on disk differs from the loaded module.
+- Fix (2026-11-03, on the VM only; the weekly image includes it):
+  `/etc/apt/apt.conf.d/52homelab-auto-reboot` makes unattended-upgrades
+  reboot at 04:00 UTC when a reboot is required. The NVIDIA packages don't
+  flag that themselves, so the same file adds an apt hook that runs
+  `/usr/local/sbin/nvidia-reboot-check`, which touches
+  `/var/run/reboot-required` when `modinfo -F version nvidia` differs from
+  the loaded module in `/proc/driver/nvidia/version`.
