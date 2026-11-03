@@ -31,7 +31,10 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/backup"
-config_files = [{ path = "backup.sh", requires = "redeploy" }]
+config_files = [
+  { path = "backup.sh", requires = "redeploy" },
+  { path = "onedrive.sh", requires = "redeploy" },
+]
 post_deploy.command = "docker restart backup-scheduler"
 
 [[stack]]

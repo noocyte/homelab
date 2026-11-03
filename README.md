@@ -175,12 +175,37 @@ Immich is the exception: its library and DB dumps are synced straight from
 | `victoriametrics/latest/` | Full DB, incremental | `vmbackup` sidecar, 02:50 | latest only |
 | `homeassistant/` | HA backups (encrypted by HA, ~1.5 GB each) | HA, ~05:30, over NFS (HA network storage `NASBACKUP`) | HA keeps 10 |
 | `proxmox/dump/` | VM 102 + LXC 100 whole images (vzdump, zstd) | Proxmox backup job, Sun 01:00 | 2 per guest |
+| `onedrive/<name>/` | personal OneDrive, one-way copy; deleted/changed files kept 30 days in `onedrive/.deleted/<date>/` | `compose/backup/onedrive.sh`, 02:00 | mirror of OneDrive |
 | `proxmox/host/` | Proxmox host config | `proxmox/pve-config-backup.sh`, 01:30 | 14 days |
 | *(Immich)* | library + Immich's DB dumps | Immich; synced from `/mnt/immich` | changed/deleted kept in `jottacrypt:archive/immich/<date>` |
 
 All the jobs refuse to write if the share isn't mounted (nothing lands on
 the VM's own disk), and `backup.sh` skips the mirror then, so an empty mount
 can't wipe Jotta.
+
+### OneDrive copies
+
+`rclone-onedrive` (in the `backup` stack) copies every account in
+`/srv/rclone-onedrive/rclone.conf` named `onedrive-<name>` to
+`/mnt/backups/onedrive/<name>` at 02:00. Read-only towards OneDrive.
+Accounts today: `onedrive-jarle` (~630 GB). Personal Vault is not copied
+(locked; rclone can't read it).
+
+Add an account (the owner logs in once):
+
+1. On a desktop with a browser:
+   `podman run --rm -it --network host docker.io/rclone/rclone:1 authorize onedrive`
+   → log in to Microsoft in the browser → copy the token it prints
+   (the `{"access_token":…}` line).
+2. On the docker VM:
+   `docker exec rclone-onedrive rclone config create onedrive-<name> onedrive token '<token>' drive_type personal drive_id <id> --non-interactive`.
+   The drive id: `GET https://graph.microsoft.com/v1.0/me/drive` with the
+   token's `access_token` as Bearer → `id`. Check with
+   `docker exec rclone-onedrive rclone about onedrive-<name>:`.
+
+The first copy of an account downloads everything and can take more than a
+night; later runs copy only changes. If a login expires (unused for 90
+days, or a password change), redo both steps.
 
 **Keys needed to restore** (password manager): the rclone crypt password
 *and* salt (`password`/`password2` in `rclone.conf`; without them nothing on
