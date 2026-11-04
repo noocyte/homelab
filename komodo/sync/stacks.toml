@@ -148,6 +148,9 @@ server = "docker-host"
 repo = "noocyte/homelab"
 branch = "main"
 run_directory = "compose/victorialogs"
+config_files = [
+  { path = "vector.yaml", requires = "restart" },   # only read at startup
+]
 
 [[stack]]
 name = "pve-exporter"

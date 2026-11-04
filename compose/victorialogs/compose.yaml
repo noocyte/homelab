@@ -1,5 +1,4 @@
-# VictoriaLogs: central logs. Container logs (Vector, added later in this
-# stack) and syslog from the Proxmox host and UniFi. Query in the built-in
+# VictoriaLogs: central logs. Container logs (Vector, below) and syslog from the Proxmox host and UniFi. Query in the built-in
 # UI at http://192.168.0.240:9428/select/vmui, or from Grafana.
 #
 # Data:   /srv/victorialogs. Kept 30 days, capped at 15 GiB (oldest days are
@@ -21,3 +20,13 @@ services:
       - -syslog.listenAddr.udp=:5514
       # Classic (RFC 3164) syslog timestamps carry no time zone.
       - -syslog.timezone=Europe/Oslo
+
+  # Reads all container logs through the Docker API (socket read-only) and
+  # sends them to victorialogs. Config: vector.yaml (read at startup).
+  vector:
+    image: timberio/vector:0.60.0-alpine
+    restart: unless-stopped
+    depends_on: [victorialogs]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - .:/etc/vector:ro                        # vector.yaml
