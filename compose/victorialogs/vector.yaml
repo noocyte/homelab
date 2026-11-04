@@ -1,0 +1,33 @@
+# Vector: ships every container's logs (Docker API) to VictoriaLogs.
+# Streams are per compose project + container, e.g. query `project:pihole`.
+# Only logs written after Vector starts are shipped (no backfill).
+
+sources:
+  docker:
+    type: docker_logs
+    # Vector's own output stays out, so it never logs about shipping itself.
+    exclude_containers:
+      - victorialogs-vector
+
+transforms:
+  tidy:
+    type: remap
+    inputs: [docker]
+    source: |
+      .project = .label."com.docker.compose.project"
+      del(.label)
+
+sinks:
+  victorialogs:
+    type: elasticsearch
+    inputs: [tidy]
+    endpoints: ["http://victorialogs:9428/insert/elasticsearch/"]
+    mode: bulk
+    api_version: v8
+    compression: gzip
+    healthcheck:
+      enabled: false
+    query:
+      _msg_field: message
+      _time_field: timestamp
+      _stream_fields: project,container_name
