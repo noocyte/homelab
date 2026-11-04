@@ -48,6 +48,25 @@ EOF
 The docker-host `backup` stack copies `/storage/shares/backups/proxmox` to
 Jottacloud (`jottacrypt:proxmox`) every night at 03:00.
 
+## Logs → VictoriaLogs
+
+The host's systemd journal is shipped to VictoriaLogs on docker-host
+(`compose/victorialogs`). PVE 9 has no rsyslog; `systemd-journal-upload` sends
+journal entries with all their fields, remembers its position, and catches up
+after docker-host was down. Set up 2026-11-04:
+
+```sh
+apt-get install -y --no-install-recommends systemd-journal-remote  # + libmicrohttpd
+mkdir -p /etc/systemd/journal-upload.conf.d
+printf '[Upload]\nURL=http://192.168.0.240:9428/insert/journald\n' \
+  > /etc/systemd/journal-upload.conf.d/50-victorialogs.conf
+systemctl enable --now systemd-journal-upload.service
+```
+
+The package also contains the receiver (`systemd-journal-remote`); it stays
+disabled. Query in vmui/Grafana with `_HOSTNAME:pve`, e.g.
+`_HOSTNAME:pve _SYSTEMD_UNIT:pvedaemon.service`. VictoriaLogs keeps 30 days.
+
 ## VM 102 notes
 
 - `qemu-guest-agent` runs inside the VM (installed 2026-11-03), so backups
