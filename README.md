@@ -277,6 +277,8 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 1883 | Mosquitto (MQTT) |
 | 5000 | OSRM |
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
+| 9428 | VictoriaLogs (central logs; web UI at `/select/vmui`, kept 30 days, no backup) |
+| 5514/udp | VictoriaLogs syslog (Proxmox host, UniFi) |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
 | 9221 | pve-exporter (`/pve?target=192.168.0.107`, scraped by VictoriaMetrics) |
