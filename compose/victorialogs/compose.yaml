@@ -1,0 +1,23 @@
+# VictoriaLogs: central logs. Container logs (Vector, added later in this
+# stack) and syslog from the Proxmox host and UniFi. Query in the built-in
+# UI at http://192.168.0.240:9428/select/vmui, or from Grafana.
+#
+# Data:   /srv/victorialogs. Kept 30 days, capped at 15 GiB (oldest days are
+#         dropped first when the cap is hit).
+# Backup: none on purpose; logs are only useful for recent troubleshooting.
+services:
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.53.0
+    restart: unless-stopped
+    ports:
+      - 9428:9428          # HTTP: ingestion, queries, vmui
+      - 5514:5514/udp      # syslog (Proxmox rsyslog, UniFi)
+    volumes:
+      - /srv/victorialogs:/storage
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=30d
+      - -retention.maxDiskSpaceUsageBytes=15GiB
+      - -syslog.listenAddr.udp=:5514
+      # Classic (RFC 3164) syslog timestamps carry no time zone.
+      - -syslog.timezone=Europe/Oslo

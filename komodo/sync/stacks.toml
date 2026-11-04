@@ -140,6 +140,16 @@ config_files = [
 post_deploy.command = "docker restart backup-scheduler || echo 'backup-scheduler not running yet - skipped'"
 
 [[stack]]
+name = "victorialogs"
+deploy = true
+tags = ["infra", "gitops"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/victorialogs"
+
+[[stack]]
 name = "pve-exporter"
 deploy = true
 tags = ["infra", "gitops"]
