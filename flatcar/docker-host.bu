@@ -15,6 +15,8 @@ passwd:
     - name: core
       ssh_authorized_keys:
         - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPCkWXW54OuMCISwdaPme9cBQloqoyvVwj4vOL8y6gAv jarle@famnygaard.com
+        # pve's root key (/root/.ssh/id_ed25519.pub on the Proxmox host).
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILj+SFBYIhP4/XVAKWYyku8PlyFaguf9tW5c2+LBxLVt root@pve
 
 storage:
   directories:
@@ -52,6 +54,15 @@ storage:
           REBOOT_STRATEGY=reboot
           LOCKSMITHD_REBOOT_WINDOW_START=04:30
           LOCKSMITHD_REBOOT_WINDOW_LENGTH=1h
+
+    # Container log rotation for every container (incl. Komodo). Without it
+    # Docker uses json-file with no size limit. Only applies to containers
+    # created after Docker (re)starts with this file.
+    - path: /etc/docker/daemon.json
+      mode: 0644
+      contents:
+        inline: |
+          { "log-driver": "local", "log-opts": { "max-size": "20m", "max-file": "5" } }
 
     # Flatcar ships Docker but not the compose plugin. The standalone binary
     # is only used to start Komodo itself; Komodo Periphery brings its own.
