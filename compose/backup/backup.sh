@@ -20,6 +20,9 @@ trap 'rm -rf "$LOCK"' EXIT
 
 log "starting"
 FAILED=""
+# backup-status.sh reads these: offsite-<folder> = time of the last good sync.
+mkdir -p /config/status
+ok() { date +%s > "/config/status/offsite-$1"; }
 
 # Immich: ship originals + DB dump, skip regenerable derivatives
 log "syncing immich"
@@ -27,7 +30,7 @@ rclone sync /sources/immich jottacrypt:immich \
   --exclude '/thumbs/**' \
   --exclude '/encoded-video/**' \
   --backup-dir "jottacrypt:archive/immich/$DATE" \
-  --log-level INFO
+  --log-level INFO && ok immich || { log "ERROR: immich failed"; FAILED="$FAILED immich"; }
 
 # Everything else: each service writes its own backups to the ZFS share,
 # one folder each (see compose.yaml). Mirror each folder; the services keep
@@ -44,7 +47,7 @@ else
       rclone sync "$B/$d" "jottacrypt:$d" \
         --exclude '*.partial' --exclude '*.partial/**' \
         --exclude '*.dat' --exclude '*.tmp/**' \
-        --log-level INFO || { log "ERROR: $d failed"; FAILED="$FAILED $d"; }
+        --log-level INFO && ok "$d" || { log "ERROR: $d failed"; FAILED="$FAILED $d"; }
     else
       log "WARNING: $B/$d is empty or missing, skipping"
     fi
@@ -58,7 +61,7 @@ if grep -q " /sources/archive nfs" /proc/mounts && [ -n "$(ls -A /sources/archiv
   log "syncing personal archive"
   rclone sync /sources/archive jottacrypt:personal-archive \
     --backup-dir "jottacrypt:archive/personal-archive/$DATE" \
-    --log-level INFO || { log "ERROR: personal archive failed"; FAILED="$FAILED personal-archive"; }
+    --log-level INFO && ok personal-archive || { log "ERROR: personal archive failed"; FAILED="$FAILED personal-archive"; }
 else
   log "WARNING: /sources/archive not mounted or empty, skipping personal archive"
 fi

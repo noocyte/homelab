@@ -62,3 +62,14 @@ providers:
     updateIntervalSeconds: 60
     options:
       path: /homelab-dashboards/energy
+
+  # Backup status (compose/backup/backup-status.sh → VictoriaMetrics).
+  - name: homelab-backups
+    orgId: 1
+    folder: Backups
+    type: file
+    disableDeletion: false
+    allowUiUpdates: false
+    updateIntervalSeconds: 60
+    options:
+      path: /homelab-dashboards/backups

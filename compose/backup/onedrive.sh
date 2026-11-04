@@ -8,6 +8,7 @@
 # to /onedrive/.deleted/<date>/<name>/ and are removed after KEEP_DAYS.
 # The backup job mirrors /mnt/backups/onedrive to Jotta at 03:00.
 # Not copied: Personal Vault (locked; rclone can't read it).
+# After a good run: $DEST/.status-<name> = time (for backup-status.sh).
 set -eu
 DEST=/onedrive
 KEEP_DAYS=30
@@ -38,6 +39,7 @@ for remote in $(rclone listremotes | grep '^onedrive-'); do
     --exclude '/Personal Vault/**' \
     --fast-list --transfers 8 --checkers 16 \
     --log-level INFO --stats 10m --stats-log-level NOTICE \
+    && date +%s > "$DEST/.status-$name" \
     || { log "ERROR: $remote failed"; FAILED="$FAILED $name"; }
 done
 

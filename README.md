@@ -154,6 +154,7 @@ Stored as Komodo Variables (secret), used in `komodo/sync/stacks.toml` as
 | `TESLAMATE_SAIC_TOPIC_PREFIX`, `TESLAMATE_SAIC_DB_URI` | teslamate (saic2postgresql) |
 | `UNPOLLER_UNIFI_PASS` | unpoller (UniFi local account `unpoller`, View Only) |
 | `PVE_EXPORTER_TOKEN` | pve-exporter (Proxmox API token `prometheus@pve!exporter`, PVEAuditor - read-only) |
+| `HA_BACKUP_WEBHOOK` | backup (`backup-status.sh` → HA automation "Backup status"; `http://192.168.0.63:8123/api/webhook/<id>`) |
 
 Not in Komodo: `secrets/komodo.env` (Komodo's own DB/admin/JWT secrets,
 embedded in the Ignition file) and `/srv/rclone/rclone.conf`.
@@ -186,6 +187,27 @@ Immich is the exception: its library and DB dumps are synced straight from
 All the jobs refuse to write if the share isn't mounted (nothing lands on
 the VM's own disk), and `backup.sh` skips the mirror then, so an empty mount
 can't wipe Jotta.
+
+### Backup status and alerts
+
+`compose/backup/backup-status.sh` runs every 15 min (Ofelia, in
+`rclone-backup`). It finds the newest backup of each job in the table above,
+and reads when each folder last reached Jotta (`backup.sh` writes
+`/srv/rclone/status/offsite-<folder>` after a good sync; `onedrive.sh` writes
+`onedrive/.status-<name>`). A backup is **late** when its newest file is
+older than its interval + 4 h (daily 28 h, vzdump 7 d 4 h); off-site when a
+folder hasn't reached Jotta for 36 h.
+
+- **Grafana → Backups**: status table per job, off-site table, sizes over time
+  (numbers pushed to VictoriaMetrics as `backup_*`).
+- **Home Assistant**: automation "Backup status" (webhook). Every run sets
+  `input_text.backup_status` ("All 9 OK" / "1 of 9 late: crafty") and
+  `input_datetime.backup_status_last_report`; a backup turning late, and
+  recovering, sends a phone notification once. If no report arrives for 2 h,
+  HA sends "Backup monitor silent".
+- The webhook URL is the Komodo secret `HA_BACKUP_WEBHOOK`
+  (`http://192.168.0.63:8123/api/webhook/<id>`, local only; the id is in the
+  HA automation's webhook trigger).
 
 ### OneDrive copies
 

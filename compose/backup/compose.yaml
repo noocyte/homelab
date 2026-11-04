@@ -2,6 +2,7 @@
 #
 # Host paths:
 #   /srv/rclone/rclone.conf   rclone config incl. crypt password (restore from password manager)
+#   /srv/rclone/status/       backup-status.sh state (last good Jotta sync per folder, alerts sent)
 #   /mnt/immich               Immich library (virtiofs, read-only)
 #   /mnt/backups              ZFS backups share on Proxmox (NFS). Every service
 #                             writes its own backups there, one folder each:
@@ -41,6 +42,9 @@ services:
       # 100 Mbit/s (12 MiB/s) 06:00-00:00, full speed at night - so big
       # first copies don't slow the house's internet in the daytime.
       - RCLONE_BWLIMIT=06:00,12M 00:00,off
+      # backup-status.sh: HA webhook (Komodo secret, local-only webhook in HA).
+      - HA_WEBHOOK_URL=${HA_BACKUP_WEBHOOK:-}
+      - VM_URL=http://192.168.0.240:8428
     volumes:
       - /srv/rclone:/config                   # RW: rclone refreshes the Jottacloud token
       - /mnt/immich:/sources/immich:ro
@@ -53,6 +57,9 @@ services:
       ofelia.enabled: "true"
       ofelia.job-exec.nightly.schedule: "0 0 3 * * *"   # 03:00 daily
       ofelia.job-exec.nightly.command: "sh /scripts/backup.sh"
+      # Status → VictoriaMetrics (Grafana "Backups") + Home Assistant alerts.
+      ofelia.job-exec.backup-status.schedule: "0 */15 * * * *"
+      ofelia.job-exec.backup-status.command: "sh /scripts/backup-status.sh"
 
   # Nightly one-way copy of personal OneDrive accounts (onedrive.sh). Its
   # own container and config: it can write only to /mnt/backups/onedrive,
