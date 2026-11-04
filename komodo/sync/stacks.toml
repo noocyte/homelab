@@ -34,7 +34,11 @@ run_directory = "compose/backup"
 config_files = [
   { path = "backup.sh", requires = "redeploy" },
   { path = "onedrive.sh", requires = "redeploy" },
+  { path = "backup-status.sh", requires = "redeploy" },
 ]
+environment = """
+HA_BACKUP_WEBHOOK = [[HA_BACKUP_WEBHOOK]]
+"""
 post_deploy.command = "docker restart backup-scheduler"
 
 [[stack]]
@@ -198,6 +202,7 @@ config_files = [
   { path = "grafana/dashboards/unifi/usw.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/pihole/pihole-exporter.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/proxmox/proxmox-via-prometheus.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/backups/backups.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/energy/energy-now.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/energy/energy-weather.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/energy/energy-cost.json", requires = "redeploy", services = ["grafana"] },
