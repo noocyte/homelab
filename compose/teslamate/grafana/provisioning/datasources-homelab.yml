@@ -29,3 +29,12 @@ datasources:
       httpMethod: POST
       timeInterval: 30s
     editable: false
+
+  # Central logs (compose/victorialogs): container logs via Vector + syslog.
+  # Queries use LogsQL, e.g. `project:pihole`.
+  - name: VictoriaLogs
+    uid: victorialogs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    url: http://192.168.0.240:9428
+    editable: false

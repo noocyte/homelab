@@ -81,7 +81,11 @@ services:
       - DATABASE_PASS=${TESLAMATE_DB_PASS}
       - DATABASE_NAME=teslamate
       - DATABASE_HOST=database
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel
+      # The image only runs GF_INSTALL_PLUGINS with _FORCE=true (and disables
+      # Grafana's own preinstall). Re-installs on every start; if grafana.com
+      # is unreachable, Grafana fails to start and restart: always retries.
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,natel-discrete-panel,grafana-piechart-panel,victoriametrics-logs-datasource 0.33.1
+      - GF_INSTALL_PLUGINS_FORCE=true
     ports:
       - 3000:3000
     volumes:
