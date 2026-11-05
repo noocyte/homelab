@@ -1,0 +1,24 @@
+# Vector on the Proxmox host: forwards the systemd journal to Vector on
+# docker-host (compose/victorialogs), which applies the common log schema.
+# Installed as /etc/vector/vector.yaml, see README.md → "Logs → VictoriaLogs".
+#
+# The disk buffer keeps up to 256 MiB of journal while docker-host is down
+# (e.g. while it reboots); Vector also remembers its journal position.
+
+data_dir: /var/lib/vector
+
+sources:
+  journal:
+    type: journald
+    # Whole journal on first start (VictoriaLogs keeps the last 30 days).
+    current_boot_only: false
+
+sinks:
+  docker_host:
+    type: vector
+    inputs: [journal]
+    address: 192.168.0.240:6000
+    buffer:
+      type: disk
+      max_size: 268435488
+      when_full: block
