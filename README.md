@@ -279,7 +279,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9428 | VictoriaLogs (central logs; web UI at `/select/vmui`, kept 30 days, no backup) |
 | 5514/udp | Syslog into Vector → VictoriaLogs (UniFi) |
-| 6000 | Vector protocol: journal from Vector on pve |
+| 6000 | Vector protocol: journals from Vector on pve and on Home Assistant OS |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
 | 9221 | pve-exporter (`/pve?target=192.168.0.107`, scraped by VictoriaMetrics) |
@@ -371,13 +371,14 @@ gives all sources one schema:
 
 | Field | Values |
 |---|---|
-| `host` (stream) | `docker-host`, `pve`, `UCGULT` |
-| `service` (stream) | compose project, systemd unit, syslog app (`unifi` for UniFi events) |
-| `container` (stream) | container name (docker-host only) |
+| `host` (stream) | `docker-host`, `pve`, `homeassistant`, `UCGULT` |
+| `service` (stream) | compose project, container or systemd unit, syslog app (`unifi` for UniFi events) |
+| `container` (stream) | container name (docker-host; HA OS core/Supervisor/add-ons) |
 | `level` | `debug` `info` `notice` `warning` `error` `critical` `unknown` |
 | `source` | `docker`, `journald`, `syslog` |
 
-`level` comes from journald priority / syslog severity, otherwise from the
+`level` comes from journald priority / syslog severity (not for containers:
+Docker's journald driver only knows stdout/stderr), otherwise from the
 text (JSON `level`, `level=`, `INFO`/`[ERROR]`/`▶ NOTICE`, Postgres `LOG:`).
 Komodo's routine database chatter (ferretdb "Command handled … ok", postgres
 "cron job …", ~19k lines/hour) is dropped.
@@ -386,6 +387,7 @@ Komodo's routine database chatter (ferretdb "Command handled … ok", postgres
 |---|---|---|
 | Containers on docker-host | Vector, Docker API | `service:pihole`, `level:error` |
 | Proxmox host | Vector on pve, journal → 6000/tcp (see `proxmox/README.md`) | `host:pve service:pvedaemon.service` |
+| Home Assistant OS | Vector add-on, journal → 6000/tcp (see below) | `service:homeassistant level:error`, `service:hassio_supervisor` |
 | UniFi (UCG Ultra) | syslog (CEF) → 5514/udp | `service:unifi`, `event:"Wired Client Disconnected"` |
 
 UniFi setting (Network 10.6): Settings → **CyberSecure → Traffic Logging** →
@@ -397,6 +399,15 @@ UniFi sends CEF. Vector (`compose/victorialogs/vector.yaml`) unpacks it: the
 readable text becomes the message, the event name goes to `event`, and all
 details to `unifi.*` (e.g. `unifi.UNIFIclientAlias:"Google Streamer 4K"`).
 The time comes from UniFi's own UTC field.
+
+Home Assistant OS has no package manager, so Vector runs as twiebe's
+community add-on (<https://github.com/twiebe/hassos-addons>, Vector 0.60.0).
+It reads the whole HA OS journal (Core, Supervisor, every add-on, the host)
+and runs our own `homeassistant/vector.yaml` (option **Override Config** on;
+the file goes in `/addon_configs/<repo>_vector/vector.yaml`, e.g. with the
+SSH add-on). Like pve it only forwards; the schema is applied on docker-host.
+Auto-update is off for the add-on: it is a one-person project with a
+prebuilt image, so update it deliberately.
 
 ## Remote access (Tailscale)
 
