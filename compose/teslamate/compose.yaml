@@ -44,7 +44,7 @@ services:
 
   teslamateagile:
     # v1.23.0. Moved from Docker Hub mattjeanes/teslamateagile (deprecated in v1.21.0).
-    image: ghcr.io/amyjeanes/teslamateagile@sha256:5e6b18c1bec197ea2afdcc5feafc876c3eb0040f168e985fd2031c2371abdf1d
+    image: ghcr.io/amyjeanes/teslamateagile:v1.23.0@sha256:5e6b18c1bec197ea2afdcc5feafc876c3eb0040f168e985fd2031c2371abdf1d
     restart: always
     environment:
       - DATABASE_USER=teslamate
