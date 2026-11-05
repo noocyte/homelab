@@ -55,6 +55,10 @@ services:
       - TeslaMate__EnergyProvider=Tibber
       - Tibber__AccessToken=${TESLAMATE_TIBBER_TOKEN}
       - TeslaMate__FeePerKilowattHour=0.40
+      # One line per log entry (default .NET output puts the text on a second
+      # line without a level), so Vector/VictoriaLogs see "info: … text".
+      - Logging__Console__FormatterName=simple
+      - Logging__Console__FormatterOptions__SingleLine=true
 
   database:
     image: postgres:17
