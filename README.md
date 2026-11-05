@@ -278,7 +278,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 5000 | OSRM |
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9428 | VictoriaLogs (central logs; web UI at `/select/vmui`, kept 30 days, no backup) |
-| 5514/udp | VictoriaLogs syslog (Proxmox host, UniFi) |
+| 5514/udp | VictoriaLogs syslog (UniFi) |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
 | 9221 | pve-exporter (`/pve?target=192.168.0.107`, scraped by VictoriaMetrics) |
@@ -357,6 +357,31 @@ UnPoller's official set (grafana.com 11311-11315), in
 UniFi account: UniFi → Admins & Users → Create New Admin → "Restrict to
 local access only", username `unpoller`, role **View Only** for Network.
 Its password is the Komodo secret `UNPOLLER_UNIFI_PASS`.
+
+## Central logs (VictoriaLogs)
+
+`compose/victorialogs`: VictoriaLogs keeps 30 days (max 15 GiB, no backup).
+Query in vmui (http://192.168.0.240:9428/select/vmui) or Grafana → Explore →
+**VictoriaLogs**. Pick a long enough time range: quiet services (Pi-hole) only
+log on start/reload.
+
+| Source | How | Query |
+|---|---|---|
+| Containers on docker-host | Vector (same stack), Docker API | `project:pihole`, `container_name:pihole` |
+| Proxmox host | `systemd-journal-upload` → `/insert/journald` (see `proxmox/README.md`) | `_HOSTNAME:pve`, `_SYSTEMD_UNIT:pvedaemon.service` |
+| UniFi (UCG Ultra) | syslog (CEF) → 5514/udp | `hostname:UCGULT` |
+
+UniFi setting (Network 10.6): Settings → **CyberSecure → Traffic Logging** →
+Activity Logging (Syslog) = **SIEM Server**, `192.168.0.240` port `5514`.
+Contents: all except "Firewall Default Policy" (very noisy). Debug Logs and
+Netconsole off. Set 2026-11-05.
+
+UniFi sends CEF: the text is in `cef.extension.msg` and `_msg` stays empty.
+Readable view:
+
+```
+hostname:UCGULT | format "<cef.name>: <cef.extension.msg>" as _msg
+```
 
 ## Remote access (Tailscale)
 
