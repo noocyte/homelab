@@ -1,0 +1,27 @@
+# Vector on Home Assistant OS: forwards the HA OS journal (HA Core, Supervisor,
+# every add-on, the host) to Vector on docker-host (compose/victorialogs),
+# which applies the common log schema. Same job as proxmox/vector.yaml.
+#
+# Runs in twiebe's Vector add-on (https://github.com/twiebe/hassos-addons) with
+# "Override Config" on; the file lives in /addon_configs/<repo>_vector/vector.yaml.
+# See README.md → "Central logs".
+#
+# /data is the add-on's persistent storage: journal position + disk buffer
+# survive add-on restarts and updates.
+
+data_dir: /data
+
+sources:
+  journal:
+    type: journald
+    journal_directory: /var/log/journal
+
+sinks:
+  docker_host:
+    type: vector
+    inputs: [journal]
+    address: http://192.168.0.240:6000
+    buffer:
+      type: disk
+      max_size: 268435488
+      when_full: block

@@ -1,8 +1,8 @@
 # Vector: collects all logs and sends them to VictoriaLogs in ONE schema.
 #
-#   host       docker-host | pve | UCGULT
-#   service    compose project | systemd unit | syslog app ("unifi" for CEF)
-#   container  container name (docker logs only)
+#   host       docker-host | pve | homeassistant | UCGULT
+#   service    compose project | container or systemd unit | syslog app ("unifi" for CEF)
+#   container  container name (docker-host, and HA OS add-ons/core)
 #   level      debug | info | notice | warning | error | critical | unknown
 #   source     docker | journald | syslog
 #   message    the text (ANSI colour codes stripped)
@@ -14,9 +14,10 @@
 #   docker   every container on docker-host (Docker API, socket read-only).
 #            Only logs written after Vector starts (no backfill).
 #   syslog   5514/udp: UniFi. CEF is unpacked (event, unifi.*).
-#   pve      6000/tcp: Vector on the Proxmox host forwards its journal
-#            (proxmox/vector.yaml; disk-buffered there, so nothing is lost
-#            while docker-host is down).
+#   journal  6000/tcp: Vector on the Proxmox host (proxmox/vector.yaml) and
+#            on Home Assistant OS (homeassistant/vector.yaml) forward their
+#            journals; disk-buffered there, so nothing is lost while
+#            docker-host is down.
 
 sources:
   docker:
@@ -30,7 +31,7 @@ sources:
     mode: udp
     address: 0.0.0.0:5514
 
-  pve:
+  journal:
     type: vector
     address: 0.0.0.0:6000
 
@@ -94,18 +95,23 @@ transforms:
         }
       }
 
-  pve_norm:
+  journal_norm:
     type: remap
-    inputs: [pve]
+    inputs: [journal]
     source: |
       # journald PRIORITY 0-7 (emerg, alert, crit, err, warning, notice, info, debug)
       levels = {"0": "critical", "1": "critical", "2": "critical", "3": "error", "4": "warning", "5": "notice", "6": "info", "7": "debug"}
       level = get(levels, [string(.PRIORITY) ?? "6"]) ?? "info"
+      # Containers (HA OS: core, Supervisor, add-ons) log through Docker's
+      # journald driver: PRIORITY is only stdout (6) / stderr (3), and HA Core
+      # writes everything to stderr. Leave the level to the text detection.
+      if .CONTAINER_NAME != null { level = null }
       . = {
         "timestamp": .timestamp,
         "message": replace(string(.message) ?? "", r'\x1b\[[0-9;]*[A-Za-z]', ""),
         "host": .host,
-        "service": ._SYSTEMD_UNIT || .SYSLOG_IDENTIFIER || ._TRANSPORT || "journal",
+        "service": .CONTAINER_NAME || ._SYSTEMD_UNIT || .SYSLOG_IDENTIFIER || ._TRANSPORT || "journal",
+        "container": .CONTAINER_NAME,
         "level": level,
         "pid": ._PID,
         "command": ._COMM,
@@ -120,7 +126,7 @@ transforms:
   # or Postgres' LOG:.
   levels:
     type: remap
-    inputs: [drop_noise, syslog_norm, pve_norm]
+    inputs: [drop_noise, syslog_norm, journal_norm]
     source: |
       m = string(.message) ?? ""
       head = slice(m, 0, 200) ?? m
