@@ -1,0 +1,84 @@
+// Renovate (Mend-hosted GitHub app): PRs for new container images in
+// compose/*/compose.yaml and komodo/compose.yaml. Merging a PR = Komodo
+// deploys that stack. See README.md → "Image updates (Renovate)".
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:recommended'],
+  timezone: 'Europe/Oslo',
+
+  // Merging several stack PRs at once is a batch deploy (crash-looped
+  // backup-scheduler once). Few open PRs, merge one at a time.
+  prConcurrentLimit: 3,
+
+  // Releases must be 14 days old. PRs only appear once that has passed
+  // (no CI in this repo, so the internal check counts as the result).
+  minimumReleaseAge: '14 days',
+  prCreation: 'not-pending',
+  internalChecksAsSuccess: true,
+
+  packageRules: [
+    {
+      // Major versions (Postgres 17 → 18, Mosquitto 1.6 → 2, ...) only after
+      // approval on the Dependency Dashboard issue.
+      matchUpdateTypes: ['major'],
+      dependencyDashboardApproval: true,
+    },
+    {
+      // Moving tags: pin to a digest, so a rebuilt/moved tag becomes a PR
+      // instead of changing silently on the next `compose pull`.
+      matchPackageNames: [
+        'postgres',
+        'rclone/rclone',
+        'favonia/cloudflare-ddns',
+        'ghcr.io/itskovacs/trip',
+        'eclipse-mosquitto',
+      ],
+      pinDigests: true,
+    },
+    {
+      // Same version, rebuilt image (e.g. postgres:17 base updates).
+      matchUpdateTypes: ['digest'],
+      minimumReleaseAge: '3 days',
+    },
+    {
+      // These registries give Renovate no release dates, so the age check
+      // can't work (it would hold the update forever). PRs come right away;
+      // check the release date yourself before merging.
+      matchPackageNames: ['ghcr.io/**', 'registry.gitlab.com/**'],
+      minimumReleaseAgeBehaviour: 'timestamp-optional',
+      addLabels: ['check release age'],
+    },
+    {
+      groupName: 'teslamate',
+      matchPackageNames: ['teslamate/teslamate', 'teslamate/grafana'],
+    },
+    {
+      groupName: 'victoriametrics',
+      matchPackageNames: ['victoriametrics/victoria-metrics', 'victoriametrics/vmbackup'],
+    },
+    {
+      // Komodo itself is not deployed by its own gitops: update by hand.
+      groupName: 'komodo',
+      matchPackageNames: ['ghcr.io/moghtech/komodo-core', 'ghcr.io/moghtech/komodo-periphery'],
+      addLabels: ['manual deploy'],
+    },
+    {
+      // FerretDB and its DocumentDB image must match each other and Komodo;
+      // the DocumentDB tag (17-0.107.0-ferretdb-2.7.0) isn't a version
+      // Renovate can follow. Update together with Komodo, by hand.
+      matchPackageNames: ['ghcr.io/ferretdb/**'],
+      enabled: false,
+    },
+    {
+      // Immich: versions via IMMICH_VERSION, on the Immich/Plex VM, and
+      // Immich pins its own valkey/postgres per release.
+      matchFileNames: ['compose/immich/**'],
+      enabled: false,
+    },
+    {
+      // Our own images (:latest, built elsewhere).
+      matchPackageNames: ['noocyte/**'],
+      enabled: false,
+    },
+  ],
+}

@@ -132,10 +132,34 @@ deploying the app, or stop it first.
   (Komodo → Syncs → homelab → Execute).
 - **Is it working?** Komodo → Procedures → `homelab-gitops`: last run and its
   log. A failed run sends an alert.
+- **Image updates**: Renovate opens a PR per update (`renovate.json5`), see
+  [Image updates (Renovate)](#image-updates-renovate). Merge them one at a time.
 - **OS updates**: automatic. Flatcar downloads updates and reboots in the
   04:30-05:30 window. A failed update rolls back by itself.
 - **Logs / shell / container stats**: Komodo UI. In a terminal: `ssh core@192.168.0.240`,
   then `docker ...`, or `lazydocker`.
+
+## Image updates (Renovate)
+
+The Mend-hosted **Renovate** GitHub app (free) reads every `image:` in
+`compose/*/compose.yaml` and `komodo/compose.yaml` and opens a PR when a newer
+image exists. Rules are in `renovate.json5`:
+
+- A release has to be **14 days old** before its PR appears. Exception:
+  ghcr.io and registry.gitlab.com give Renovate no release dates, so those
+  PRs come at once with the label **`check release age`**. Look at the
+  release date (and release notes) before merging.
+- **Major versions** (Postgres 17 → 18, Mosquitto 1.6 → 2, ...) only appear
+  after ticking them in the **Dependency Dashboard** issue.
+- Moving tags (`postgres:17`, `rclone:1`, ...) are pinned to a digest, so a
+  rebuilt tag becomes a PR too instead of changing on the next pull.
+- At most 3 open PRs. **Merge one at a time** and let Komodo deploy it:
+  several stacks deploying at once crash-looped `backup-scheduler` before.
+- `komodo` PRs (label **`manual deploy`**): Komodo doesn't deploy itself;
+  deploy on docker-host by hand.
+- Not covered: Immich (`IMMICH_VERSION`, other VM), FerretDB/DocumentDB
+  (versions tied to Komodo), our own `noocyte/*:latest` images, images
+  pinned by digest only (osrm), Vector on pve/HA, the Grafana plugin version.
 
 ## Secrets
 
