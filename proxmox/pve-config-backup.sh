@@ -54,7 +54,9 @@ qm list                               > qm-list.txt
 pct list                              > pct-list.txt
 dpkg --get-selections                 > dpkg-selections.txt
 ip -br addr                           > ip-addr.txt
-nvidia-smi -L                         > nvidia.txt 2>&1 || true
+# Not nvidia-smi: it loads the host NVIDIA driver, which logs errors because
+# the GPU belongs to vfio-pci (passthrough to VM 102). dkms shows the driver.
+dkms status                           > dkms.txt 2>&1 || true
 
 tar -czf "$OUT/pve-host-$DATE.tar.gz.part" -C "$TMP" "pve-host-$DATE"
 chmod 600 "$OUT/pve-host-$DATE.tar.gz.part"
