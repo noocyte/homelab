@@ -1,6 +1,9 @@
-# Vector: ships every container's logs (Docker API) to VictoriaLogs.
-# Streams are per compose project + container, e.g. query `project:pihole`.
-# Only logs written after Vector starts are shipped (no backfill).
+# Vector: ships logs to VictoriaLogs.
+# - Containers (Docker API): streams per compose project + container,
+#   e.g. `project:pihole`. Only logs written after Vector starts (no backfill).
+# - Syslog on 5514/udp (UniFi): streams per host + app/event,
+#   e.g. `hostname:UCGULT`. UniFi's CEF messages are unpacked: readable text
+#   in the message, event name in `event`, all details under `unifi.*`.
 
 sources:
   docker:
@@ -9,6 +12,11 @@ sources:
     exclude_containers:
       - victorialogs-vector
 
+  syslog:
+    type: socket
+    mode: udp
+    address: 0.0.0.0:5514
+
 transforms:
   tidy:
     type: remap
@@ -16,6 +24,32 @@ transforms:
     source: |
       .project = .label."com.docker.compose.project"
       del(.label)
+
+  syslog_parse:
+    type: remap
+    inputs: [syslog]
+    # Classic (RFC 3164) syslog timestamps carry no time zone.
+    timezone: Europe/Oslo
+    source: |
+      sender = .host
+      parsed, err = parse_syslog(.message)
+      if err == null {
+        . = parsed
+      } else {
+        .hostname = sender
+      }
+      .sender_ip = sender
+      if .appname == "CEF" {
+        c, err = parse_cef("CEF:" + string!(.message))
+        if err == null {
+          del(.appname)
+          .unifi = c
+          .message = string(c.msg) ?? string!(c.name)
+          .event = c.name
+          # UniFi's own UTC time is exact; the syslog header has no zone.
+          .timestamp = parse_timestamp(c.UNIFIutcTime, "%+") ?? .timestamp
+        }
+      }
 
 sinks:
   victorialogs:
@@ -31,3 +65,17 @@ sinks:
       _msg_field: message
       _time_field: timestamp
       _stream_fields: project,container_name
+
+  victorialogs_syslog:
+    type: elasticsearch
+    inputs: [syslog_parse]
+    endpoints: ["http://victorialogs:9428/insert/elasticsearch/"]
+    mode: bulk
+    api_version: v8
+    compression: gzip
+    healthcheck:
+      enabled: false
+    query:
+      _msg_field: message
+      _time_field: timestamp
+      _stream_fields: hostname,appname,event
