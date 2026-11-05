@@ -379,7 +379,9 @@ gives all sources one schema:
 
 `level` comes from journald priority / syslog severity (not for containers:
 Docker's journald driver only knows stdout/stderr), otherwise from the
-text (JSON `level`, `level=`, `INFO`/`[ERROR]`/`▶ NOTICE`, Postgres `LOG:`).
+text (JSON `level`, `level=`, `INFO`/`[ERROR]`/`▶ NOTICE`, `info:`,
+Postgres `LOG:`). HA Core's multi-line entries (tracebacks) are merged back
+into one log line. Blank lines are dropped.
 Komodo's routine database chatter (ferretdb "Command handled … ok", postgres
 "cron job …", ~19k lines/hour) is dropped.
 
