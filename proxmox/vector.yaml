@@ -10,14 +10,15 @@ data_dir: /var/lib/vector
 sources:
   journal:
     type: journald
-    # Whole journal on first start (VictoriaLogs keeps the last 30 days).
-    current_boot_only: false
+    # Current boot only: `current_boot_only: false` isn't supported with
+    # systemd 250-257 (PVE 9 has 257). The host rarely reboots, so the current
+    # boot still covers VictoriaLogs' 30 days on a first start.
 
 sinks:
   docker_host:
     type: vector
     inputs: [journal]
-    address: 192.168.0.240:6000
+    address: http://192.168.0.240:6000
     buffer:
       type: disk
       max_size: 268435488
