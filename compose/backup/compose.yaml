@@ -22,7 +22,7 @@
 
 services:
   ofelia:
-    image: mcuadros/ofelia:0.3.21
+    image: mcuadros/ofelia:0.3.22
     container_name: backup-scheduler
     command: daemon --docker
     restart: unless-stopped
