@@ -120,13 +120,32 @@ transforms:
         "source": "journald"
       }
 
+  # HA Core writes multi-line entries (Python tracebacks); the journal has
+  # one entry per line. Glue lines that don't start with HA's timestamp onto
+  # the entry before, so a traceback stays with its ERROR line.
+  journal_split:
+    type: route
+    inputs: [journal_norm]
+    route:
+      ha_core: '.host == "homeassistant" && .container == "homeassistant"'
+
+  ha_core_merge:
+    type: reduce
+    inputs: [journal_split.ha_core]
+    group_by: [host, container]
+    starts_when: 'match(string(.message) ?? "", r''^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'')'
+    expire_after_ms: 2000
+    merge_strategies:
+      message: concat_newline
+
   # One level vocabulary for all sources. Uses the level a source already
   # has (journald, syslog); otherwise looks for it in the text: JSON
   # "level", logfmt level=, an upper-case word (INFO, ▶ NOTICE, [ERROR]),
-  # or Postgres' LOG:.
+  # a lower-case "info:"/"warning:" prefix (s6-rc: info: ...), or
+  # Postgres' LOG:.
   levels:
     type: remap
-    inputs: [drop_noise, syslog_norm, journal_norm]
+    inputs: [drop_noise, syslog_norm, journal_split._unmatched, ha_core_merge]
     source: |
       m = string(.message) ?? ""
       head = slice(m, 0, 200) ?? m
@@ -145,6 +164,10 @@ transforms:
         f = parse_regex(head, r'\b(?P<l>TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|FATAL|CRIT|CRITICAL|PANIC|Info|Warning|Error)\b') ?? {}
         l = f.l
       }
+      if l == null {
+        f = parse_regex(head, r'(?:^|[\s:\]])(?P<l>debug|info|notice|warning|warn|error|fatal|critical):\s') ?? {}
+        l = f.l
+      }
       if l == null && contains(head, "LOG:") { l = "info" }
       l = downcase(string(l) ?? "unknown")
       .level = if includes(["trace", "debug", "dbug"], l) { "debug" }
@@ -155,10 +178,16 @@ transforms:
         else if includes(["fatal", "crit", "critical", "panic", "alert", "emerg", "emergency"], l) { "critical" }
         else { "unknown" }
 
+  # Blank lines (e.g. between HA tracebacks) carry nothing.
+  not_empty:
+    type: filter
+    inputs: [levels]
+    condition: 'strip_whitespace(string(.message) ?? "") != ""'
+
 sinks:
   victorialogs:
     type: elasticsearch
-    inputs: [levels]
+    inputs: [not_empty]
     endpoints: ["http://victorialogs:9428/insert/elasticsearch/"]
     mode: bulk
     api_version: v8
