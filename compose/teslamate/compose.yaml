@@ -43,7 +43,8 @@ services:
       - all
 
   teslamateagile:
-    image: mattjeanes/teslamateagile@sha256:78becfffcafecadf54b75046d325d755c953efec69ac2df6320ebd96f901ae2e
+    # v1.23.0. Moved from Docker Hub mattjeanes/teslamateagile (deprecated in v1.21.0).
+    image: ghcr.io/amyjeanes/teslamateagile@sha256:5e6b18c1bec197ea2afdcc5feafc876c3eb0040f168e985fd2031c2371abdf1d
     restart: always
     environment:
       - DATABASE_USER=teslamate
@@ -55,6 +56,10 @@ services:
       - TeslaMate__EnergyProvider=Tibber
       - Tibber__AccessToken=${TESLAMATE_TIBBER_TOKEN}
       - TeslaMate__FeePerKilowattHour=0.40
+      # One line per log entry (default .NET output puts the text on a second
+      # line without a level), so Vector/VictoriaLogs see "info: … text".
+      - Logging__Console__FormatterName=simple
+      - Logging__Console__FormatterOptions__SingleLine=true
 
   database:
     image: postgres:17

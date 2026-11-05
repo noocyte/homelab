@@ -141,7 +141,8 @@ transforms:
   # One level vocabulary for all sources. Uses the level a source already
   # has (journald, syslog); otherwise looks for it in the text: JSON
   # "level", logfmt level=, an upper-case word (INFO, ▶ NOTICE, [ERROR]),
-  # a lower-case "info:"/"warning:" prefix (s6-rc: info: ...), or
+  # a lower-case "info:"/"warning:" prefix (s6-rc: info: ...), a lower-case
+  # [info]/[warn] (OSRM), or
   # Postgres' LOG:.
   levels:
     type: remap
@@ -166,6 +167,10 @@ transforms:
       }
       if l == null {
         f = parse_regex(head, r'(?:^|[\s:\]])(?P<l>debug|info|notice|warning|warn|error|fatal|critical):\s') ?? {}
+        l = f.l
+      }
+      if l == null {
+        f = parse_regex(head, r'\[(?P<l>debug|info|notice|warning|warn|error|fatal|critical)\]') ?? {}
         l = f.l
       }
       if l == null && contains(head, "LOG:") { l = "info" }
