@@ -50,22 +50,24 @@ Jottacloud (`jottacrypt:proxmox`) every night at 03:00.
 
 ## Logs → VictoriaLogs
 
-The host's systemd journal is shipped to VictoriaLogs on docker-host
-(`compose/victorialogs`). PVE 9 has no rsyslog; `systemd-journal-upload` sends
-journal entries with all their fields, remembers its position, and catches up
-after docker-host was down. Set up 2026-11-04:
+Vector on the host forwards the systemd journal to Vector on docker-host
+(`compose/victorialogs`), which puts it into the common log schema (`host`,
+`service`, `level`, …). Config: `vector.yaml` in this folder. PVE 9 has no
+rsyslog. Vector remembers its journal position and disk-buffers up to
+256 MiB while docker-host is down.
 
 ```sh
-apt-get install -y --no-install-recommends systemd-journal-remote  # + libmicrohttpd
-mkdir -p /etc/systemd/journal-upload.conf.d
-printf '[Upload]\nURL=http://192.168.0.240:9428/insert/journald\n' \
-  > /etc/systemd/journal-upload.conf.d/50-victorialogs.conf
-systemctl enable --now systemd-journal-upload.service
+curl -fLO https://packages.timber.io/vector/0.60.0/vector_0.60.0-1_amd64.deb
+apt-get install -y ./vector_0.60.0-1_amd64.deb     # no repo added; pinned
+cp vector.yaml /etc/vector/vector.yaml
+systemctl enable --now vector
 ```
 
-The package also contains the receiver (`systemd-journal-remote`); it stays
-disabled. Query in vmui/Grafana with `_HOSTNAME:pve`, e.g.
-`_HOSTNAME:pve _SYSTEMD_UNIT:pvedaemon.service`. VictoriaLogs keeps 30 days.
+Query: `host:pve`, e.g. `host:pve service:pvedaemon.service`, `host:pve level:error`.
+
+History: 2026-11-04 the journal went straight to VictoriaLogs with
+`systemd-journal-upload` (package `systemd-journal-remote`); replaced by
+Vector on 2026-11-05 so all sources share one schema.
 
 ## VM 102 notes
 

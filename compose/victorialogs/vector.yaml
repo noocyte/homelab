@@ -1,9 +1,22 @@
-# Vector: ships logs to VictoriaLogs.
-# - Containers (Docker API): streams per compose project + container,
-#   e.g. `project:pihole`. Only logs written after Vector starts (no backfill).
-# - Syslog on 5514/udp (UniFi): streams per host + app/event,
-#   e.g. `hostname:UCGULT`. UniFi's CEF messages are unpacked: readable text
-#   in the message, event name in `event`, all details under `unifi.*`.
+# Vector: collects all logs and sends them to VictoriaLogs in ONE schema.
+#
+#   host       docker-host | pve | UCGULT
+#   service    compose project | systemd unit | syslog app ("unifi" for CEF)
+#   container  container name (docker logs only)
+#   level      debug | info | notice | warning | error | critical | unknown
+#   source     docker | journald | syslog
+#   message    the text (ANSI colour codes stripped)
+#
+# Streams: host, service, container. Everything else is a normal field.
+# Examples: `service:pihole`, `host:pve level:error`, `service:unifi event:*`.
+#
+# Inputs:
+#   docker   every container on docker-host (Docker API, socket read-only).
+#            Only logs written after Vector starts (no backfill).
+#   syslog   5514/udp: UniFi. CEF is unpacked (event, unifi.*).
+#   pve      6000/tcp: Vector on the Proxmox host forwards its journal
+#            (proxmox/vector.yaml; disk-buffered there, so nothing is lost
+#            while docker-host is down).
 
 sources:
   docker:
@@ -17,32 +30,62 @@ sources:
     mode: udp
     address: 0.0.0.0:5514
 
+  pve:
+    type: vector
+    address: 0.0.0.0:6000
+
 transforms:
-  tidy:
+  docker_norm:
     type: remap
     inputs: [docker]
     source: |
-      .project = .label."com.docker.compose.project"
-      del(.label)
+      . = {
+        "timestamp": .timestamp,
+        "message": replace(string(.message) ?? "", r'\x1b\[[0-9;]*[A-Za-z]', ""),
+        "host": "docker-host",
+        "service": .label."com.docker.compose.project" || .container_name,
+        "container": .container_name,
+        "image": .image,
+        "stream": .stream,
+        "source": "docker"
+      }
 
-  syslog_parse:
+  # Komodo's database chatter: ~19k lines/hour of routine success messages.
+  # Errors and everything else from these containers are kept.
+  drop_noise:
+    type: filter
+    inputs: [docker_norm]
+    condition: |
+      m = string!(.message)
+      ferret_ok = .container == "komodo-ferretdb-1" && contains(m, "\tINFO\t") && contains(m, "Command handled") && contains(m, "\"result\":\"ok\"")
+      pg_cron = .container == "komodo-postgres-1" && match(m, r'LOG:  cron job \d+ (starting|COMMAND completed|completed):')
+      !ferret_ok && !pg_cron
+
+  syslog_norm:
     type: remap
     inputs: [syslog]
     # Classic (RFC 3164) syslog timestamps carry no time zone.
     timezone: Europe/Oslo
     source: |
       sender = .host
-      parsed, err = parse_syslog(.message)
-      if err == null {
-        . = parsed
-      } else {
-        .hostname = sender
+      p, err = parse_syslog(.message)
+      if err != null {
+        p = {"message": .message, "timestamp": .timestamp, "hostname": sender}
       }
-      .sender_ip = sender
-      if .appname == "CEF" {
+      . = {
+        "timestamp": p.timestamp,
+        "message": p.message,
+        "host": p.hostname || sender,
+        "service": p.appname || "syslog",
+        "level": p.severity,
+        "pid": p.procid,
+        "sender_ip": sender,
+        "source": "syslog"
+      }
+      if .service == "CEF" {
         c, err = parse_cef("CEF:" + string!(.message))
         if err == null {
-          del(.appname)
+          .service = "unifi"
           .unifi = c
           .message = string(c.msg) ?? string!(c.name)
           .event = c.name
@@ -51,10 +94,65 @@ transforms:
         }
       }
 
+  pve_norm:
+    type: remap
+    inputs: [pve]
+    source: |
+      # journald PRIORITY 0-7 (emerg, alert, crit, err, warning, notice, info, debug)
+      levels = {"0": "critical", "1": "critical", "2": "critical", "3": "error", "4": "warning", "5": "notice", "6": "info", "7": "debug"}
+      level = get(levels, [string(.PRIORITY) ?? "6"]) ?? "info"
+      . = {
+        "timestamp": .timestamp,
+        "message": replace(string(.message) ?? "", r'\x1b\[[0-9;]*[A-Za-z]', ""),
+        "host": .host,
+        "service": ._SYSTEMD_UNIT || .SYSLOG_IDENTIFIER || ._TRANSPORT || "journal",
+        "level": level,
+        "pid": ._PID,
+        "command": ._COMM,
+        "identifier": .SYSLOG_IDENTIFIER,
+        "transport": ._TRANSPORT,
+        "source": "journald"
+      }
+
+  # One level vocabulary for all sources. Uses the level a source already
+  # has (journald, syslog); otherwise looks for it in the text: JSON
+  # "level", logfmt level=, an upper-case word (INFO, ▶ NOTICE, [ERROR]),
+  # or Postgres' LOG:.
+  levels:
+    type: remap
+    inputs: [drop_noise, syslog_norm, pve_norm]
+    source: |
+      m = string(.message) ?? ""
+      head = slice(m, 0, 200) ?? m
+      l = .level
+      if l == null {
+        j, err = parse_json(m)
+        if err == null && is_object(j) {
+          l = j.level || j.lvl || j.severity
+        }
+      }
+      if l == null {
+        f = parse_regex(head, r'(?i)\b(?:level|lvl|severity)=["]?(?P<l>[a-z]+)') ?? {}
+        l = f.l
+      }
+      if l == null {
+        f = parse_regex(head, r'\b(?P<l>TRACE|DEBUG|INFO|NOTICE|WARN|WARNING|ERROR|ERR|FATAL|CRIT|CRITICAL|PANIC|Info|Warning|Error)\b') ?? {}
+        l = f.l
+      }
+      if l == null && contains(head, "LOG:") { l = "info" }
+      l = downcase(string(l) ?? "unknown")
+      .level = if includes(["trace", "debug", "dbug"], l) { "debug" }
+        else if includes(["info", "informational", "log", "inf"], l) { "info" }
+        else if l == "notice" { "notice" }
+        else if includes(["warn", "warning", "wrn"], l) { "warning" }
+        else if includes(["error", "err", "eror"], l) { "error" }
+        else if includes(["fatal", "crit", "critical", "panic", "alert", "emerg", "emergency"], l) { "critical" }
+        else { "unknown" }
+
 sinks:
   victorialogs:
     type: elasticsearch
-    inputs: [tidy]
+    inputs: [levels]
     endpoints: ["http://victorialogs:9428/insert/elasticsearch/"]
     mode: bulk
     api_version: v8
@@ -64,18 +162,4 @@ sinks:
     query:
       _msg_field: message
       _time_field: timestamp
-      _stream_fields: project,container_name
-
-  victorialogs_syslog:
-    type: elasticsearch
-    inputs: [syslog_parse]
-    endpoints: ["http://victorialogs:9428/insert/elasticsearch/"]
-    mode: bulk
-    api_version: v8
-    compression: gzip
-    healthcheck:
-      enabled: false
-    query:
-      _msg_field: message
-      _time_field: timestamp
-      _stream_fields: hostname,appname,event
+      _stream_fields: host,service,container

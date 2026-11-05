@@ -279,6 +279,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 8428 | VictoriaMetrics (HA writes here, Grafana reads; web UI at `/vmui`) |
 | 9428 | VictoriaLogs (central logs; web UI at `/select/vmui`, kept 30 days, no backup) |
 | 5514/udp | Syslog into Vector → VictoriaLogs (UniFi) |
+| 6000 | Vector protocol: journal from Vector on pve |
 | 9130 | unpoller (`/metrics`, scraped by VictoriaMetrics) |
 | 9617 | pihole-exporter (`/metrics`, scraped by VictoriaMetrics) |
 | 9221 | pve-exporter (`/pve?target=192.168.0.107`, scraped by VictoriaMetrics) |
@@ -365,11 +366,27 @@ Query in vmui (http://192.168.0.240:9428/select/vmui) or Grafana → Explore →
 **VictoriaLogs**. Pick a long enough time range: quiet services (Pi-hole) only
 log on start/reload.
 
-| Source | How | Query |
+Everything goes through Vector (`compose/victorialogs/vector.yaml`), which
+gives all sources one schema:
+
+| Field | Values |
+|---|---|
+| `host` (stream) | `docker-host`, `pve`, `UCGULT` |
+| `service` (stream) | compose project, systemd unit, syslog app (`unifi` for UniFi events) |
+| `container` (stream) | container name (docker-host only) |
+| `level` | `debug` `info` `notice` `warning` `error` `critical` `unknown` |
+| `source` | `docker`, `journald`, `syslog` |
+
+`level` comes from journald priority / syslog severity, otherwise from the
+text (JSON `level`, `level=`, `INFO`/`[ERROR]`/`▶ NOTICE`, Postgres `LOG:`).
+Komodo's routine database chatter (ferretdb "Command handled … ok", postgres
+"cron job …", ~19k lines/hour) is dropped.
+
+| Source | How | Example query |
 |---|---|---|
-| Containers on docker-host | Vector (same stack), Docker API | `project:pihole`, `container_name:pihole` |
-| Proxmox host | `systemd-journal-upload` → `/insert/journald` (see `proxmox/README.md`) | `_HOSTNAME:pve`, `_SYSTEMD_UNIT:pvedaemon.service` |
-| UniFi (UCG Ultra) | syslog (CEF) → 5514/udp → Vector | `hostname:UCGULT`, `event:"Wired Client Disconnected"` |
+| Containers on docker-host | Vector, Docker API | `service:pihole`, `level:error` |
+| Proxmox host | Vector on pve, journal → 6000/tcp (see `proxmox/README.md`) | `host:pve service:pvedaemon.service` |
+| UniFi (UCG Ultra) | syslog (CEF) → 5514/udp | `service:unifi`, `event:"Wired Client Disconnected"` |
 
 UniFi setting (Network 10.6): Settings → **CyberSecure → Traffic Logging** →
 Activity Logging (Syslog) = **SIEM Server**, `192.168.0.240` port `5514`.
