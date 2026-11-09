@@ -1,6 +1,13 @@
 # Tailscale: remote access to the home network (replaces serverlite's).
 #   - subnet router for 192.168.0.0/24: reach the LAN from any tailnet device
 #   - exit node: send a device's internet traffic out through home
+#   - serve/serve.json: forwards docker-host's Tailscale address, port 445, to
+#     the NAS's Samba (192.168.0.220:445). For the cabin's Home Assistant,
+#     which backs up there without accepting the LAN route (its own LAN may
+#     overlap 192.168.0.0/24). Only on the 100.x address, not on the LAN.
+#     The ACL in the Tailscale admin console decides who may use it.
+#     containerboot watches the folder: a merged change applies without a
+#     restart.
 #
 # State (node key, login): /srv/tailscale. Login once: on first start the log
 # prints a https://login.tailscale.com/... link - open it and log in. Then in
@@ -22,10 +29,12 @@ services:
       - /dev/net/tun:/dev/net/tun
     volumes:
       - /srv/tailscale:/var/lib/tailscale
+      - ./serve:/serve:ro       # folder, not file: containerboot watches it
     environment:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false      # kernel networking, needed for routing
       - TS_HOSTNAME=docker-host
       - TS_ROUTES=192.168.0.0/24
       - TS_EXTRA_ARGS=--advertise-exit-node
+      - TS_SERVE_CONFIG=/serve/serve.json
       - TS_ACCEPT_DNS=false     # the VM keeps 1.1.1.1 (see flatcar/docker-host.bu)

@@ -461,6 +461,15 @@ Set up once, by the tailnet owner:
 
 No router port forward is needed (NAT traversal).
 
+**Samba forward for the cabin.** `compose/tailscale/serve/serve.json`
+forwards docker-host's Tailscale address `100.82.192.66:445` to the NAS's
+Samba (`192.168.0.220:445`). The cabin's Home Assistant backs up there
+**without** accepting the `192.168.0.0/24` route, so an overlapping cabin
+LAN can't break its local devices. The port exists only on the tailnet
+address; the Tailscale ACL limits the cabin node to it, and a Samba user of
+its own limits it to its folder (NFS has no login, so not NFS).
+containerboot re-reads the file when it changes, without a restart.
+
 ## Not managed here (yet)
 
 - `compose/immich/` runs on VM 102 (`plex-enc`), deployed by hand.
