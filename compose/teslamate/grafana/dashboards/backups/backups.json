@@ -298,7 +298,7 @@
       "id": 5,
       "type": "table",
       "title": "Local backups (ZFS share)",
-      "description": "Newest backup file per job on /mnt/backups. Late = older than 'Expected every' + 4 h. OneDrive: time of the last completed copy.",
+      "description": "Newest backup file per job on /mnt/backups. Late = older than 'Expected every' + 4 h. OneDrive: newest = time of the last completed copy and the copy's size, total includes .deleted/ (30 days), 'In source' = what OneDrive reports (also counts Personal Vault and versions, so a few % more). Sizes measured nightly.",
       "datasource": {
         "type": "prometheus",
         "uid": "victoriametrics"
@@ -374,6 +374,19 @@
           "range": false,
           "format": "table",
           "editorMode": "code"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "refId": "F",
+          "expr": "max by (job) (last_over_time(backup_source_bytes[1h]))",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "editorMode": "code"
         }
       ],
       "transformations": [
@@ -393,7 +406,8 @@
               "Value #B": "Newest is",
               "Value #C": "Newest size",
               "Value #D": "Folder total",
-              "Value #E": "Expected every"
+              "Value #E": "Expected every",
+              "Value #F": "In source"
             },
             "indexByName": {
               "job": 0,
@@ -401,7 +415,8 @@
               "Value #B": 2,
               "Value #C": 3,
               "Value #D": 4,
-              "Value #E": 5
+              "Value #F": 5,
+              "Value #E": 6
             }
           }
         },
@@ -523,6 +538,22 @@
               {
                 "id": "unit",
                 "value": "dtdurations"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "In source"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
               }
             ]
           }
