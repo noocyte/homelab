@@ -7,7 +7,8 @@ repo. Secrets do not.
 ```
 Proxmox (192.168.0.107, "pve")             ← managed by hand, NOT updated (NVIDIA)
  ├─ VM 102  plex-enc     Immich + Plex     ← not managed here (yet)
- ├─ LXC 100 nas-server   Samba (.220)      ← Home Assistant backups go through it
+ ├─ LXC 100 nas-server   Samba (.220)      ← file shares for PCs
+ │  (pve itself exports /storage/shares/backups over NFS: docker-host, HA)
  └─ VM 200  docker-host  Flatcar (.240)    ← THIS REPO
      ├─ komodo.service   Komodo Core + Periphery (started by the OS)
      └─ Komodo stacks    everything in compose/ (deployed by Komodo from git)
