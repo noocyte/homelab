@@ -5379,7 +5379,7 @@
           "type": "prometheus",
           "uid": "victoriametrics"
         },
-        "definition": "query_result(label_join(label_replace(label_join(nvidia_smi_gpu_info{instance=\"$node\", job=\"$job\"}, \"ni\", \" #\", \"name\", \"index\"), \"us\", \"($1)\", \"uuid\", \"^(........).*\"), \"gpu_label\", \" \", \"ni\", \"us\"))",
+        "definition": "label_values(nvidia_smi_gpu_info{instance=\"$node\", job=\"$job\"}, uuid)",
         "hide": 0,
         "includeAll": false,
         "label": "GPU",
@@ -5387,11 +5387,12 @@
         "name": "gpu",
         "options": [],
         "query": {
-          "query": "query_result(label_join(label_replace(label_join(nvidia_smi_gpu_info{instance=\"$node\", job=\"$job\"}, \"ni\", \" #\", \"name\", \"index\"), \"us\", \"($1)\", \"uuid\", \"^(........).*\"), \"gpu_label\", \" \", \"ni\", \"us\"))",
-          "refId": "StandardVariableQuery"
+          "query": "label_values(nvidia_smi_gpu_info{instance=\"$node\", job=\"$job\"}, uuid)",
+          "refId": "StandardVariableQuery",
+          "qryType": 1
         },
-        "refresh": 1,
-        "regex": "/gpu_label=\"(?<text>[^\"]+)|uuid=\"(?<value>[^\"]+)/g",
+        "refresh": 2,
+        "regex": "",
         "skipUrlSync": false,
         "sort": 1,
         "tagValuesQuery": "",
