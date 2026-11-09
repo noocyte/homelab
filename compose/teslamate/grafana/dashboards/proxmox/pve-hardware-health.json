@@ -187,6 +187,18 @@
           "editorMode": "code",
           "instant": false,
           "range": true
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "instant": false,
+          "range": true,
+          "expr": "max(last_over_time(sensor__temperature_value{entity_id=\"garasjebod_temperatur\"}[1h]))",
+          "legendFormat": "Room (garasjebod)"
         }
       ],
       "fieldConfig": {
@@ -210,10 +222,42 @@
             ]
           },
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "lineWidth": 2
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Room (garasjebod)"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "text"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -229,7 +273,7 @@
           "sort": "desc"
         }
       },
-      "description": "HGST SAS disks: rated for 60 \u00b0C; aim for under 45 \u00b0C."
+      "description": "HGST SAS disks: rated for 60 \u00b0C; aim for under 45 \u00b0C. Dashed: room temperature (Home Assistant, garasjebod)."
     },
     {
       "id": 4,
@@ -280,7 +324,13 @@
             ]
           },
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "dashed"
+            },
+            "lineWidth": 2
           }
         },
         "overrides": []
