@@ -1,0 +1,731 @@
+{
+  "uid": "pve-hardware-health",
+  "title": "Proxmox hardware: temperatures and SMART",
+  "tags": [
+    "proxmox",
+    "smart"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "editable": false,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "5m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "SMART health",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max by (disk) (smartmon_device_smart_healthy{job=\"proxmox-node\"}) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "OK",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "FAILING",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "description": "smartctl's overall verdict per disk. FAILING = replace the disk."
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Bad blocks: grown defects (SAS) / reallocated sectors (SSD)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "(max by (disk) (smartmon_grown_defects_count_raw_value{job=\"proxmox-node\"}) or max by (disk) (smartmon_reallocated_sector_ct_raw_value{job=\"proxmox-node\"})) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "description": "Should stay 0. A count that keeps growing means the disk is wearing out; check `zpool status` too."
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Disk temperatures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "(max by (disk) (smartmon_temperature_celsius_raw_value{job=\"proxmox-node\"}) or max by (disk) (smartmon_airflow_temperature_cel_raw_value{job=\"proxmox-node\"})) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 45
+              },
+              {
+                "color": "red",
+                "value": 55
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "HGST SAS disks: rated for 60 \u00b0C; aim for under 45 \u00b0C."
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "CPU temperatures",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "node_hwmon_temp_celsius{job=\"proxmox-node\", chip=\"platform_coretemp_0\"}",
+          "legendFormat": "{{sensor}}",
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "description": "coretemp: temp1 is the package, the others are the cores."
+    },
+    {
+      "id": 5,
+      "type": "bargauge",
+      "title": "SSD wear left",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max by (disk) (smartmon_wear_leveling_count_value{job=\"proxmox-node\"}) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "green",
+                "value": 30
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {},
+      "description": "Samsung's normalized wear-leveling value: 100 = new, the drive is worn out near 0."
+    },
+    {
+      "id": 6,
+      "type": "bargauge",
+      "title": "SSD data written",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 16,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max by (disk) (smartmon_total_lbas_written_raw_value{job=\"proxmox-node\"}) * 512 * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "SSD power-on time",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 16,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max by (disk) (smartmon_power_on_hours_raw_value{job=\"proxmox-node\"}) * 3600 * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
+          "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {},
+      "description": "The HGST SAS disks don't report power-on hours."
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Last SMART read",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "time() - max(smartmon_smartctl_run{job=\"proxmox-node\"})",
+          "legendFormat": "age",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 3600
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "description": "The prometheus-node-exporter-smartmon.timer on pve runs every 15 min. Red = the timer stopped."
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "ZFS pool storage",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 23,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max(node_zfs_zpool_state{job=\"proxmox-node\", zpool=\"storage\", state=\"online\"})",
+          "legendFormat": "online",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "ONLINE",
+                  "color": "green"
+                },
+                "0": {
+                  "text": "NOT ONLINE",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Pending apt updates on pve",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sum(apt_upgrades_pending{job=\"proxmox-node\"}) or vector(0)",
+          "legendFormat": "pending",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "blue",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      },
+      "description": "From prometheus-node-exporter-apt.timer. Host updates are done by hand; see issue #44."
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Reboot required",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 23,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "max(node_reboot_required{job=\"proxmox-node\"})",
+          "legendFormat": "reboot",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "no",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "yes",
+                  "color": "orange"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "description": "pve (192.168.0.107): node-exporter + smartmon textfile collector (homelab repo: proxmox/README.md)."
+}

@@ -40,7 +40,9 @@ providers:
     options:
       path: /homelab-dashboards/pihole
 
-  # prometheus-pve-exporter's dashboard "Proxmox via Prometheus" (grafana.com 10347).
+  # prometheus-pve-exporter's dashboard "Proxmox via Prometheus" (grafana.com 10347),
+  # "Node Exporter Full" (grafana.com 1860, rev 46) for the host's node-exporter,
+  # and our own "Proxmox hardware: temperatures and SMART".
   - name: homelab-proxmox
     orgId: 1
     folder: Proxmox
