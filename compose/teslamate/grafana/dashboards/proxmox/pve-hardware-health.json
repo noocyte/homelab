@@ -37,7 +37,9 @@
           },
           "expr": "max by (disk) (smartmon_device_smart_healthy{job=\"proxmox-node\"}) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -114,7 +116,9 @@
           },
           "expr": "(max by (disk) (smartmon_grown_defects_count_raw_value{job=\"proxmox-node\"}) or max by (disk) (smartmon_reallocated_sector_ct_raw_value{job=\"proxmox-node\"})) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -180,7 +184,9 @@
           },
           "expr": "(max by (disk) (smartmon_temperature_celsius_raw_value{job=\"proxmox-node\"}) or max by (disk) (smartmon_airflow_temperature_cel_raw_value{job=\"proxmox-node\"})) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": false
+          "editorMode": "code",
+          "instant": false,
+          "range": true
         }
       ],
       "fieldConfig": {
@@ -248,7 +254,9 @@
           },
           "expr": "node_hwmon_temp_celsius{job=\"proxmox-node\", chip=\"platform_coretemp_0\"}",
           "legendFormat": "{{sensor}}",
-          "instant": false
+          "editorMode": "code",
+          "instant": false,
+          "range": true
         }
       ],
       "fieldConfig": {
@@ -316,7 +324,9 @@
           },
           "expr": "max by (disk) (smartmon_wear_leveling_count_value{job=\"proxmox-node\"}) * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -347,7 +357,20 @@
         },
         "overrides": []
       },
-      "options": {},
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "description": "Samsung's normalized wear-leveling value: 100 = new, the drive is worn out near 0."
     },
     {
@@ -373,7 +396,9 @@
           },
           "expr": "max by (disk) (smartmon_total_lbas_written_raw_value{job=\"proxmox-node\"}) * 512 * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -394,7 +419,20 @@
         },
         "overrides": []
       },
-      "options": {}
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
     },
     {
       "id": 7,
@@ -419,7 +457,9 @@
           },
           "expr": "max by (disk) (smartmon_power_on_hours_raw_value{job=\"proxmox-node\"}) * 3600 * on(disk) group_left(product, device_model, serial_number) max by (disk, product, device_model, serial_number) (smartmon_device_info{job=\"proxmox-node\"})",
           "legendFormat": "{{disk}} {{product}}{{device_model}} ({{serial_number}})",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -440,7 +480,20 @@
         },
         "overrides": []
       },
-      "options": {},
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
       "description": "The HGST SAS disks don't report power-on hours."
     },
     {
@@ -466,7 +519,9 @@
           },
           "expr": "time() - max(smartmon_smartctl_run{job=\"proxmox-node\"})",
           "legendFormat": "age",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -529,7 +584,9 @@
           },
           "expr": "max(node_zfs_zpool_state{job=\"proxmox-node\", zpool=\"storage\", state=\"online\"})",
           "legendFormat": "online",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -605,7 +662,9 @@
           },
           "expr": "sum(apt_upgrades_pending{job=\"proxmox-node\"}) or vector(0)",
           "legendFormat": "pending",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
@@ -667,7 +726,9 @@
           },
           "expr": "max(node_reboot_required{job=\"proxmox-node\"})",
           "legendFormat": "reboot",
-          "instant": true
+          "editorMode": "code",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
