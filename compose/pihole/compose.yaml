@@ -36,7 +36,7 @@ services:
 
   pihole-exporter:
     # v1.x speaks Pi-hole v6's API. Pinned; upgrade deliberately.
-    image: ekofr/pihole-exporter:v1.2.0
+    image: ekofr/pihole-exporter:v1.3.0
     restart: unless-stopped
     depends_on:
       - pihole
