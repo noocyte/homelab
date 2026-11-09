@@ -98,6 +98,8 @@ local_job teslamate       "TeslaMate DB"        $DAY  "$B/teslamate"       "$(ne
 local_job trip-planner    "Trip planner"        $DAY  "$B/trip-planner"    "$(newest_dir  "$B/trip-planner" '20*')"
 local_job crafty          "Crafty / Minecraft"  $DAY  "$B/crafty"          "$(newest_file "$B/crafty/nightly" 'crafty-*.tar.gz')"
 local_job homeassistant   "Home Assistant"      $DAY  "$B/homeassistant"   "$(newest_file "$B/homeassistant" '*.tar')"
+# The cabin's HA, over Tailscale → Samba share "Cabin" on the NAS (see README).
+local_job homeassistant-cabin "Home Assistant (cabin)" $DAY "$B/homeassistant-cabin" "$(newest_file "$B/homeassistant-cabin" '*.tar')"
 local_job proxmox-host    "Proxmox host config" $DAY  "$B/proxmox/host"    "$(newest_file "$B/proxmox/host" 'pve-host-*.tar.gz')"
 # Both guests share proxmox/dump: total = only this guest's files.
 local_job vzdump-102      "VM 102 image (weekly)"  $WEEK "" "$(newest_file "$B/proxmox/dump" 'vzdump-qemu-102-*.zst')" "$(sum_files "$B/proxmox/dump" 'vzdump-qemu-102-*')"
@@ -116,10 +118,10 @@ for f in "$B"/onedrive/.status-*; do
   local_job "onedrive-$name" "OneDrive ($name)" $DAY "" "$(cat "$f") $copy" "$total"
   metric "backup_source_bytes{job=\"onedrive-$name\"} $source"
 done
-# The cabin's Home Assistant uploads its daily backups (~05:00) to jarle's
-# OneDrive; they reach us with the 02:00 copy, so allow 2 days.
+# The cabin's HA also uploads each backup (~05:00) to jarle's OneDrive; they
+# reach us with the 02:00 copy, so allow 2 days. Second copy, checked too.
 CABIN="$B/onedrive/jarle/Apps/Home Assistant/backups_3bf5b0b4"
-local_job ha-cabin        "Home Assistant (cabin)" $((2 * DAY)) "$CABIN" "$(newest_file "$CABIN" 'Automatic_backup_*.tar')"
+local_job ha-cabin-onedrive "Home Assistant (cabin, via OneDrive)" $((2 * DAY)) "$CABIN" "$(newest_file "$CABIN" 'Automatic_backup_*.tar')"
 
 # Off-site: backup.sh writes /config/status/offsite-<folder> after each good sync.
 for f in "$S"/offsite-*; do
