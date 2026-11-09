@@ -155,6 +155,13 @@ Vector on 2026-11-05 so all sources share one schema.
   `/usr/local/sbin/nvidia-reboot-check`, which touches
   `/var/run/reboot-required` when `modinfo -F version nvidia` differs from
   the loaded module in `/proc/driver/nvidia/version`.
+- Driver packages (2026-11-09): only the 580 branch (Pascal legacy) is
+  installed. `nvidia-driver-550` had become a transitional package that pulled
+  in 580, so 580 was marked "automatic": purging 550 would have made apt (and
+  unattended-upgrades) treat the whole 580 driver as removable. Fixed with
+  `apt-mark manual nvidia-driver-580` before `apt-get purge nvidia-driver-550
+  nvidia-utils-550`. Before removing an old driver branch, run
+  `apt-get -s purge ...` and check the "no longer required" list.
 - GPU metrics (2026-11-09): `compose/gpu-exporter` runs as
   `/home/jarle/gpu-exporter/compose.yaml` on the VM (nvidia_gpu_exporter,
   `:9835`, VictoriaMetrics job `gpu`). Grafana → Proxmox: "Nvidia GPU (VM 102
