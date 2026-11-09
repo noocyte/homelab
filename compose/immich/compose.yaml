@@ -1,3 +1,8 @@
+# homelab: Immich on VM 102 (plex-enc), deployed by hand from
+# /home/jarle/immich-app (NOT a Komodo stack). Based on the official
+# docker-compose.yml of v3.3.6; local changes: NVENC transcoding (extends
+# nvenc) and CUDA machine learning (-cuda image + extends cuda).
+# Version is pinned with IMMICH_VERSION in .env. Upgrades: README.md here.
 #
 # WARNING: To install Immich, follow our guide: https://docs.immich.app/install/docker-compose
 #
@@ -33,24 +38,25 @@ services:
 
   immich-machine-learning:
     container_name: immich_machine_learning
+    # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
+    # Example tag: ${IMMICH_VERSION:-release}-cuda
     image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-cuda
-    restart: unless-stopped
-    env_file: .env
+    extends: # uncomment this section for hardware acceleration - see https://docs.immich.app/features/ml-hardware-acceleration
+      file: hwaccel.ml.yml
+      service: cuda # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
     volumes:
       - model-cache:/cache
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      disable: false
 
   redis:
     container_name: immich_redis
-    image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
+    image: docker.io/valkey/valkey:9@sha256:c123e3715db63d06d4ad6964884037aa0d5d4d703939b9929954112889708e1d
     healthcheck:
-      test: redis-cli ping || exit 1
+      test: redis-cli ping | grep -q PONG || exit 1
     restart: always
 
   database:

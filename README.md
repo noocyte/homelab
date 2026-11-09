@@ -158,7 +158,7 @@ image exists. Rules are in `renovate.json5`:
   several stacks deploying at once crash-looped `backup-scheduler` before.
 - `komodo` PRs (label **`manual deploy`**): Komodo doesn't deploy itself;
   deploy on docker-host by hand.
-- Not covered: Immich (`IMMICH_VERSION`, other VM), FerretDB/DocumentDB
+- Not covered: Immich (`IMMICH_VERSION` pinned in `compose/immich/example.env`; other VM, see `compose/immich/README.md`), FerretDB/DocumentDB
   (versions tied to Komodo), our own `noocyte/*:latest` images, images
   pinned by digest only (osrm), Vector on pve/HA, the Grafana plugin version.
 
