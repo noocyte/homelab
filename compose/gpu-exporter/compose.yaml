@@ -1,0 +1,26 @@
+# GPU metrics for the GTX 1060 in VM 102 (plex-enc, 192.168.0.52).
+#
+# NOT a Komodo stack: it runs on VM 102, which Komodo doesn't manage (same as
+# compose/immich). It has no [[stack]] entry in komodo/sync/stacks.toml, so
+# merging a change here deploys nothing. Deploy by hand on VM 102, see
+# proxmox/README.md → "VM 102 notes".
+#
+# Reads nvidia-smi (the NVIDIA container toolkit mounts it in via the
+# "utility" capability), so it works on GeForce cards. Metrics on :9835,
+# scraped by VictoriaMetrics as job `gpu`. When the driver breaks (e.g. the
+# "Driver/library version mismatch" after an unattended upgrade), nvidia-smi
+# fails and the dashboard's "GPU driver" panel turns red.
+services:
+  nvidia-gpu-exporter:
+    image: utkuozdemir/nvidia_gpu_exporter:1.16.0
+    container_name: nvidia_gpu_exporter
+    restart: unless-stopped
+    ports:
+      - "9835:9835"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility]
