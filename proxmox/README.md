@@ -1,8 +1,8 @@
 # Proxmox host (192.168.0.107, node `pve`)
 
-Managed by hand - **not updated** (PVE 9.2.3, kernel 7.0.6-2-pve; an update
-once broke the NVIDIA passthrough for VM 102). This file records what was set
-up, so it can be done again on a fresh install. The nightly config tarball
+Managed by hand. PVE 9.2.26, kernel 7.0.14-28-pve (updated 2026-11-09; notes
+and checklists in issue #44). This file records what was set up, so it can be
+done again on a fresh install. The nightly config tarball
 (below) holds the exact files.
 
 ## Layout
@@ -15,11 +15,51 @@ up, so it can be done again on a fresh install. The nightly config tarball
 | NFS export | `/storage/shares/backups` → 192.168.0.0/24, `all_squash,anonuid=100000`. VM 200 mounts it as `/mnt/backups`; Home Assistant mounts its subfolder `homeassistant/` (HA → Settings → System → Storage, `NASBACKUP`) |
 | NFS export | `/storage/shares/archive` → 192.168.0.0/24, same options. Desktop: `/var/mnt/bigarchive`; VM 200: `/mnt/archive` (read-only, for the Jotta backup) |
 | virtiofs mappings | `immich-fs` → `/storage/immich` (VM 102, VM 200 read-only), `media-fs` → `/storage/shares/media` (VM 102) |
-| GPU passthrough | kernel cmdline `intel_iommu=on iommu=pt`; vfio modules in `/etc/modules`; nouveau/nvidiafb blacklisted. VM 102 `hostpci0: 01:00` |
+| GPU passthrough | IOMMU on by kernel default (cmdline is just `quiet`); vfio modules in `/etc/modules`. GTX 1060 bound to `vfio-pci` at boot (see below). VM 102 `hostpci0: 01:00` |
+| Shutdown order | `pve-guests` starts after `nfs-server` (see below), so the guests stop before the NFS server does |
 | sanoid | `storage/immich`: 48 hourly, 14 daily, 8 weekly, 3 monthly |
 | VM 102 `plex-enc` | Ubuntu 24.04, Immich (`compose/immich/`) + Plex |
 | LXC 100 `nas-server` | Debian 13, Samba (.220): shares `Shares`, `Media`, `Backups` (user `jarle`), `Cabin` (user `cabin`, see the main README) |
 | VM 200 `docker-host` | Flatcar, rebuilt from this repo (see main README) |
+
+## GPU passthrough and shutdown order
+
+No NVIDIA driver on the host. The `.run`-installed 595 driver was removed on
+2026-11-09: it can't drive Pascal cards anyway, and its DKMS build was a risk
+on every kernel update. VM 102 has its own driver (580 branch).
+
+```sh
+cat > /etc/modprobe.d/vfio.conf <<'MODPROBE'
+options vfio-pci ids=10de:1c02,10de:10f1
+softdep nouveau pre: vfio-pci
+softdep nova_core pre: vfio-pci
+softdep nvidia pre: vfio-pci
+softdep snd_hda_intel pre: vfio-pci
+MODPROBE
+cat > /etc/modprobe.d/blacklist-gpu-host.conf <<'MODPROBE'
+blacklist nouveau
+options nouveau modeset=0
+blacklist nova_core
+blacklist nvidia
+blacklist nvidia_drm
+blacklist nvidia_modeset
+blacklist nvidia_uvm
+blacklist nvidia_peermem
+MODPROBE
+update-initramfs -u -k all
+# after boot: lspci -nnk -s 01:00  ->  "Kernel driver in use: vfio-pci" (both functions)
+```
+
+VM 200 mounts NFS exports from this host. Without the ordering below,
+`nfs-server` stopped first on reboot, VM 200 hung unmounting its NFS mounts
+and was hard-stopped after 180 s (seen 2026-11-09):
+
+```sh
+mkdir -p /etc/systemd/system/pve-guests.service.d
+printf '[Unit]\nAfter=nfs-server.service\n' \
+  > /etc/systemd/system/pve-guests.service.d/after-nfs-server.conf
+systemctl daemon-reload
+```
 
 ## Backups of the host and its guests
 
