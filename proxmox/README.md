@@ -18,7 +18,7 @@ up, so it can be done again on a fresh install. The nightly config tarball
 | GPU passthrough | kernel cmdline `intel_iommu=on iommu=pt`; vfio modules in `/etc/modules`; nouveau/nvidiafb blacklisted. VM 102 `hostpci0: 01:00` |
 | sanoid | `storage/immich`: 48 hourly, 14 daily, 8 weekly, 3 monthly |
 | VM 102 `plex-enc` | Ubuntu 24.04, Immich (`compose/immich/`) + Plex |
-| LXC 100 `nas-server` | Debian 13, Samba (.220): shares `Shares`, `Media`, `Backups`, user `jarle` |
+| LXC 100 `nas-server` | Debian 13, Samba (.220): shares `Shares`, `Media`, `Backups` (user `jarle`), `Cabin` (user `cabin`, see the main README) |
 | VM 200 `docker-host` | Flatcar, rebuilt from this repo (see main README) |
 
 ## Backups of the host and its guests
