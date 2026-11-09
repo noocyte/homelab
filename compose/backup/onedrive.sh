@@ -8,12 +8,25 @@
 # to /onedrive/.deleted/<date>/<name>/ and are removed after KEEP_DAYS.
 # The backup job mirrors /mnt/backups/onedrive to Jotta at 03:00.
 # Not copied: Personal Vault (locked; rclone can't read it).
-# After a good run: $DEST/.status-<name> = time (for backup-status.sh).
+# After a good run, for backup-status.sh (the tree is too big to measure
+# every 15 min):
+#   $DEST/.status-<name> = time
+#   $DEST/.size-<name>   = "<copy bytes> <copy + .deleted bytes> <OneDrive used bytes>"
+# OneDrive's "used" also counts Personal Vault and version history, so it is
+# a few % above the copy; a growing gap means the copy is falling behind.
 set -eu
 DEST=/onedrive
 KEEP_DAYS=30
 DATE="$(date +%F)"
 log() { echo "[onedrive $(date -Iseconds)] $*"; }
+
+measure() {  # measure <name> <remote>  - exact du of the copy (~3.5 min over NFS)
+  copy=$(du -sk "$DEST/$1" | cut -f1)
+  kept=$(du -skc "$DEST"/.deleted/*/"$1" 2>/dev/null | tail -1 | cut -f1)
+  used=$(rclone about "$2" --full | awk '$1 == "Used:" { print $2 }')
+  echo "$(( ${copy:-0} * 1024 )) $(( (${copy:-0} + ${kept:-0}) * 1024 )) ${used:-0}" > "$DEST/.size-$1.tmp"
+  mv "$DEST/.size-$1.tmp" "$DEST/.size-$1"
+}
 
 # Refuse to write to the VM's own disk if the NFS share isn't mounted.
 grep -q " $DEST nfs" /proc/mounts || { log "$DEST is not the NFS share, aborting"; exit 1; }
@@ -31,6 +44,7 @@ echo $$ > "$LOCK/pid"
 trap 'rm -rf "$LOCK"' EXIT
 
 FAILED=""
+OK=""
 for remote in $(rclone listremotes | grep '^onedrive-'); do
   name="${remote#onedrive-}"; name="${name%:}"
   log "syncing $remote → $DEST/$name"
@@ -39,7 +53,7 @@ for remote in $(rclone listremotes | grep '^onedrive-'); do
     --exclude '/Personal Vault/**' \
     --fast-list --transfers 8 --checkers 16 \
     --log-level INFO --stats 10m --stats-log-level NOTICE \
-    && date +%s > "$DEST/.status-$name" \
+    && { date +%s > "$DEST/.status-$name"; OK="$OK $name"; } \
     || { log "ERROR: $remote failed"; FAILED="$FAILED $name"; }
 done
 
@@ -47,6 +61,11 @@ done
 if [ -d "$DEST/.deleted" ]; then
   find "$DEST/.deleted" -mindepth 1 -maxdepth 1 -type d -mtime +"$KEEP_DAYS" -exec rm -rf {} +
 fi
+
+for name in $OK; do
+  log "measuring $name"
+  measure "$name" "onedrive-$name:" || log "size check for $name failed"
+done
 
 [ -z "$FAILED" ] || { log "failed:$FAILED"; exit 1; }
 log "done"

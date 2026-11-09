@@ -70,14 +70,19 @@ newest_dir() {
   echo "${d%% *} $(( $(du -sk "${d#* }" | cut -f1) * 1024 ))"
 }
 
-# local <job> <label> <interval> <folder, "" = don't measure> <"mtime bytes">
+# Total bytes of the files matching <pattern> directly in <dir>
+sum_files() {
+  find "$1" -maxdepth 1 -type f -name "$2" -exec stat -c '%s' {} + 2>/dev/null | awk '{ s += $1 } END { print s + 0 }'
+}
+
+# local <job> <label> <interval> <folder to du, "" = use total> <"mtime bytes"> [total bytes]
 local_job() {
-  job=$1; label=$2; interval=$3; dir=$4; set -- $5
+  job=$1; label=$2; interval=$3; dir=$4; total=${6:-0}; set -- $5
   ts=${1:-0}; bytes=${2:-0}
-  total=0; [ -z "$dir" ] || total=$(du -sk "$dir" 2>/dev/null | cut -f1)
+  if [ -n "$dir" ]; then kb=$(du -sk "$dir" 2>/dev/null | cut -f1); total=$(( ${kb:-0} * 1024 )); fi
   metric "backup_last_timestamp_seconds{job=\"$job\"} $ts"
   metric "backup_last_bytes{job=\"$job\"} $bytes"
-  metric "backup_total_bytes{job=\"$job\"} $(( ${total:-0} * 1024 ))"
+  metric "backup_total_bytes{job=\"$job\"} $total"
   metric "backup_expected_interval_seconds{job=\"$job\"} $interval"
   judge "$job" "$label" "$ts" $((interval + 4 * 3600)) backup_ok job
 }
@@ -94,17 +99,27 @@ local_job trip-planner    "Trip planner"        $DAY  "$B/trip-planner"    "$(ne
 local_job crafty          "Crafty / Minecraft"  $DAY  "$B/crafty"          "$(newest_file "$B/crafty/nightly" 'crafty-*.tar.gz')"
 local_job homeassistant   "Home Assistant"      $DAY  "$B/homeassistant"   "$(newest_file "$B/homeassistant" '*.tar')"
 local_job proxmox-host    "Proxmox host config" $DAY  "$B/proxmox/host"    "$(newest_file "$B/proxmox/host" 'pve-host-*.tar.gz')"
-local_job vzdump-102      "VM 102 image (weekly)"  $WEEK "$B/proxmox/dump" "$(newest_file "$B/proxmox/dump" 'vzdump-qemu-102-*.zst')"
-local_job vzdump-100      "LXC 100 image (weekly)" $WEEK "$B/proxmox/dump" "$(newest_file "$B/proxmox/dump" 'vzdump-lxc-100-*.zst')"
+# Both guests share proxmox/dump: total = only this guest's files.
+local_job vzdump-102      "VM 102 image (weekly)"  $WEEK "" "$(newest_file "$B/proxmox/dump" 'vzdump-qemu-102-*.zst')" "$(sum_files "$B/proxmox/dump" 'vzdump-qemu-102-*')"
+local_job vzdump-100      "LXC 100 image (weekly)" $WEEK "" "$(newest_file "$B/proxmox/dump" 'vzdump-lxc-100-*.zst')" "$(sum_files "$B/proxmox/dump" 'vzdump-lxc-100-*')"
 # vmbackup rewrites this marker when a backup completes.
 vm=$(stat -c '%Y' "$B/victoriametrics/latest/backup_complete.ignore" 2>/dev/null || echo 0)
 local_job victoriametrics "VictoriaMetrics"     $DAY  "$B/victoriametrics" "$vm $(( $(du -sk "$B/victoriametrics/latest" | cut -f1) * 1024 ))"
-# OneDrive: onedrive.sh writes .status-<name> (epoch) after a good run; the tree is too big to scan.
+# OneDrive: onedrive.sh writes .status-<name> (epoch) and .size-<name> after a
+# good run; the tree is too big to measure here. Newest size = the copy,
+# total = copy + .deleted/, backup_source_bytes = what OneDrive says it holds.
 for f in "$B"/onedrive/.status-*; do
   [ -e "$f" ] || continue
   name=${f##*/.status-}
-  local_job "onedrive-$name" "OneDrive ($name)" $DAY "" "$(cat "$f") 0"
+  set -- $(cat "$B/onedrive/.size-$name" 2>/dev/null)
+  copy=${1:-0}; total=${2:-0}; source=${3:-0}
+  local_job "onedrive-$name" "OneDrive ($name)" $DAY "" "$(cat "$f") $copy" "$total"
+  metric "backup_source_bytes{job=\"onedrive-$name\"} $source"
 done
+# The cabin's Home Assistant uploads its daily backups (~05:00) to jarle's
+# OneDrive; they reach us with the 02:00 copy, so allow 2 days.
+CABIN="$B/onedrive/jarle/Apps/Home Assistant/backups_3bf5b0b4"
+local_job ha-cabin        "Home Assistant (cabin)" $((2 * DAY)) "$CABIN" "$(newest_file "$CABIN" 'Automatic_backup_*.tar')"
 
 # Off-site: backup.sh writes /config/status/offsite-<folder> after each good sync.
 for f in "$S"/offsite-*; do
