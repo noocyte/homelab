@@ -23,8 +23,9 @@ change here deploys nothing.
    and `hwaccel.ml.yml`; re-apply the local changes above; bump
    `IMMICH_VERSION` in `example.env`. Merge.
 3. Safety net, on the Proxmox host: stop Immich, then
-   `qm snapshot 102 pre-immich-<version>` (instant; covers Postgres on the VM
-   disk; the photos on ZFS aren't changed by an upgrade).
+   `qm snapshot 102 pre-immich-v3-3-6` (instant; covers Postgres on the VM
+   disk; the photos on ZFS aren't changed by an upgrade). Snapshot names
+   can't contain dots.
 4. On VM 102 in `/home/jarle/immich-app`: fetch the files from `main`, set
    `IMMICH_VERSION` in `.env`, `docker compose config` (check both GPU
    reservations), `docker compose pull && docker compose up -d`,
@@ -34,9 +35,9 @@ change here deploys nothing.
    load), an upload from the phone.
 6. Phone/tablet apps and any CLI / immich-go must match the server's major
    version (a v2 CLI against v3 uploads files that never register).
-7. A few days later: `qm delsnapshot 102 pre-immich-<version>`.
+7. A few days later: `qm delsnapshot 102 pre-immich-<version, dots as dashes>`.
 
-**Rollback:** `qm rollback 102 pre-immich-<version>` (VM disk incl. Postgres
+**Rollback:** `qm rollback 102 pre-immich-<version, dots as dashes>` (VM disk incl. Postgres
 back to before the upgrade; uploads made after the snapshot are in the library
 but not in the DB). Without a snapshot: restore the matching DB dump from
 `backups/` (<https://docs.immich.app/administration/backup-and-restore>) or the
@@ -44,6 +45,9 @@ weekly vzdump image of VM 102.
 
 ## History
 
-- 2026-11-09: v2.7.5 → v3.3.6. The DB already ran VectorChord (`vchord`
-  0.4.3, `vector` 0.8.1), so the v3 pgvecto.rs removal needed nothing; `.env`
-  had none of the variables v3 dropped. Version pinned from then on.
+- 2026-11-09: v2.7.5 → v3.3.6, about 4 min downtime (images pulled
+  beforehand). The DB already ran VectorChord (`vchord` 0.4.3, `vector`
+  0.8.1), so the v3 pgvecto.rs removal needed nothing; `.env` had none of the
+  variables v3 dropped. Migrations OK, smart search on CUDA. Snapshot
+  `pre-immich-v3-3-6`; old files in `/home/jarle/immich-app/old-v2.7.5/`.
+  Version pinned from then on.
