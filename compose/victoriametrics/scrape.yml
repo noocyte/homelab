@@ -12,6 +12,14 @@ scrape_configs:
     static_configs:
       - targets: ["192.168.0.240:9617"]
 
+  # The Proxmox host's own hardware: node-exporter (Debian package) on pve,
+  # incl. CPU temperatures, ZFS and SMART via the smartmon textfile collector.
+  # See proxmox/README.md.
+  - job_name: proxmox-node
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["192.168.0.107:9100"]
+
   # Proxmox via pve-exporter: the exporter is at .240:9221, the Proxmox host
   # to ask is passed as ?target=.
   - job_name: pve

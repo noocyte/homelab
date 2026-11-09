@@ -48,6 +48,31 @@ EOF
 The docker-host `backup` stack copies `/storage/shares/backups/proxmox` to
 Jottacloud (`jottacrypt:proxmox`) every night at 03:00.
 
+## Metrics: node-exporter (temperatures, ZFS, SMART)
+
+Installed 2026-11-09, after the host update (on the un-updated host apt
+wanted 14 core upgrades for it). VictoriaMetrics scrapes `:9100` as job
+`proxmox-node`. Dashboards in Grafana → Proxmox: "Proxmox hardware:
+temperatures and SMART" and "Node Exporter Full (pve)".
+
+```sh
+apt-get install --no-install-recommends \
+  prometheus-node-exporter prometheus-node-exporter-collectors
+# uses the smartmontools that PVE already has; skips ipmitool/nvme-cli/snmp
+curl -s localhost:9100/metrics | grep -E '^(node_hwmon_temp_celsius|smartmon_device_smart_healthy)'
+```
+
+- `prometheus-node-exporter-smartmon.timer` (every 15 min) writes
+  `/var/lib/prometheus/node-exporter/smartmon.prom`;
+  `prometheus-node-exporter-apt.timer` writes pending updates and
+  `node_reboot_required`.
+- The HGST SAS disks report temperature, health and *grown defects* (their
+  version of reallocated sectors) but no power-on hours. The SATA SSDs report
+  the usual ATA attributes, including wear leveling.
+- CPU temperatures come from `coretemp`. There is no hwmon sensor for the
+  disks (SAS disks don't work with `drivetemp`), so disk temperatures come
+  from SMART only. The GPU is passed through, so the host can't see its temperature.
+
 ## Logs → VictoriaLogs
 
 Vector on the host forwards the systemd journal to Vector on docker-host

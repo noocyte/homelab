@@ -215,6 +215,8 @@ config_files = [
   { path = "grafana/dashboards/unifi/usw.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/pihole/pihole-exporter.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/proxmox/proxmox-via-prometheus.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/proxmox/node-exporter-full.json", requires = "redeploy", services = ["grafana"] },
+  { path = "grafana/dashboards/proxmox/pve-hardware-health.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/backups/backups.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/energy/energy-now.json", requires = "redeploy", services = ["grafana"] },
   { path = "grafana/dashboards/energy/energy-weather.json", requires = "redeploy", services = ["grafana"] },
