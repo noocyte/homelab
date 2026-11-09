@@ -155,3 +155,17 @@ Vector on 2026-11-05 so all sources share one schema.
   `/usr/local/sbin/nvidia-reboot-check`, which touches
   `/var/run/reboot-required` when `modinfo -F version nvidia` differs from
   the loaded module in `/proc/driver/nvidia/version`.
+- GPU metrics (2026-11-09): `compose/gpu-exporter` runs as
+  `/home/jarle/gpu-exporter/compose.yaml` on the VM (nvidia_gpu_exporter,
+  `:9835`, VictoriaMetrics job `gpu`). Grafana → Proxmox: "Nvidia GPU (VM 102
+  plex-enc)" and the GPU row in "Proxmox hardware". Its "GPU driver" panel
+  turns red when `nvidia-smi` fails, so a driver mismatch like the one above is
+  visible right away.
+  **Not a Komodo stack** (Komodo doesn't manage this VM): merging a change,
+  e.g. a Renovate image update, deploys nothing. Deploy by hand, on VM 102
+  as `jarle`:
+  ```sh
+  cd ~/gpu-exporter
+  curl -fsSLO https://raw.githubusercontent.com/noocyte/homelab/main/compose/gpu-exporter/compose.yaml
+  docker compose up -d
+  ```

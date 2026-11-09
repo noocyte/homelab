@@ -20,6 +20,13 @@ scrape_configs:
     static_configs:
       - targets: ["192.168.0.107:9100"]
 
+  # The GTX 1060 in VM 102 (plex-enc): nvidia_gpu_exporter, run by hand on
+  # the VM (compose/gpu-exporter, not a Komodo stack).
+  - job_name: gpu
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["192.168.0.52:9835"]
+
   # Proxmox via pve-exporter: the exporter is at .240:9221, the Proxmox host
   # to ask is passed as ?target=.
   - job_name: pve
