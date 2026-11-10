@@ -202,6 +202,7 @@ branch = "main"
 run_directory = "compose/teslamate"
 config_files = [
   { path = "dump.sh", requires = "redeploy" },
+  { path = "mosquitto/mosquitto.conf", requires = "restart", services = ["mosquitto"] },
   # Grafana re-reads its provisioning on restart.
   { path = "grafana/provisioning/dashboards-homelab.yml", requires = "restart", services = ["grafana"] },
   { path = "grafana/provisioning/datasources-homelab.yml", requires = "restart", services = ["grafana"] },

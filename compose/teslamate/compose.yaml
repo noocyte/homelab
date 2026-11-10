@@ -117,12 +117,14 @@ services:
       - CAR_NUMBER=2
 
   mosquitto:
-    image: eclipse-mosquitto:1.6
+    image: eclipse-mosquitto:2.0.21
     restart: always
     ports:
       - 1883:1883
     volumes:
-      - /srv/teslamate/mosquitto/config:/mosquitto/config
+      # Folder, not single file: a single-file bind mount keeps pointing at
+      # the old file after git pull replaces it.
+      - ./mosquitto:/mosquitto/config:ro
       - /srv/teslamate/mosquitto/data:/mosquitto/data
 
   saic2postgresql:
