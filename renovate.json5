@@ -49,6 +49,12 @@
       addLabels: ['check release age'],
     },
     {
+      // Docker Hub has a stray v3.0.8 tag (pushed 2023, no such release on
+      // GitHub); real releases are 0.x. Without this it shows up as a major.
+      matchPackageNames: ['mcuadros/ofelia'],
+      allowedVersions: '<1',
+    },
+    {
       groupName: 'teslamate',
       matchPackageNames: ['teslamate/teslamate', 'teslamate/grafana'],
     },
