@@ -29,7 +29,7 @@ services:
       # IPv4 only: Docker on docker-host has no IPv6, so IPv6 upstreams fail.
       FTLCONF_dns_upstreams: "1.1.1.3;1.0.0.3"
       FTLCONF_dns_domain_name: home.lan
-      FTLCONF_dns_hosts: "192.168.0.240 docker-host.home.lan;192.168.0.107 proxmox.home.lan;192.168.0.63 ha.home.lan;192.168.0.65 nas.home.lan;192.168.0.220 smb.home.lan"
+      FTLCONF_dns_hosts: "192.168.0.240 docker-host.home.lan;192.168.0.107 proxmox.home.lan;192.168.0.63 ha.home.lan;192.168.0.220 smb.home.lan"
       FTLCONF_dns_cnameRecords: "homeassistant.local,ha.home.lan"
     volumes:
       - /srv/pihole/etc-pihole:/etc/pihole
