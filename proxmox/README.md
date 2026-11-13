@@ -113,6 +113,38 @@ curl -s localhost:9100/metrics | grep -E '^(node_hwmon_temp_celsius|smartmon_dev
   disks (SAS disks don't work with `drivetemp`), so disk temperatures come
   from SMART only. The GPU is passed through, so the host can't see its temperature.
 
+## Alerts → phone (via Home Assistant)
+
+Mail from the host can't leave it (no relayhost; `jarle@famnygaard.com` has no
+reachable MX), so since 2026-11-13 Proxmox notifications also go to Home
+Assistant as a webhook, and HA pushes them to the phone.
+
+- HA automation **"Proxmox notifications"** (`automation.proxmox_notifications`):
+  webhook trigger (POST, local only) → `notify.mobile_app_pixel_8_pro`, title
+  `Proxmox: <title>`, message cut at 900 characters. The webhook ID is in
+  `~/.config/homelab/pve-ha-webhook.txt` on the desktop.
+- Proxmox target `ha-push` (Datacenter → Notifications), stored as a secret
+  `hookid`:
+
+```sh
+B64(){ printf '%s' "$1" | base64 -w0; }
+pvesh create /cluster/notifications/endpoints/webhook --name ha-push --method post \
+  --url 'http://192.168.0.63:8123/api/webhook/{{ secrets.hookid }}' \
+  --header "name=Content-Type,value=$(B64 application/json)" \
+  --body "$(B64 '{"title": {{ json title }}, "message": {{ json message }}, "severity": {{ json severity }}}')" \
+  --secret "name=hookid,value=$(B64 "$WEBHOOK_ID")"
+# matcher: warnings/errors, plus all mail to root (ZFS ZED, smartd, cron),
+# which proxmox-mail-forward turns into type=system-mail notifications
+pvesh create /cluster/notifications/matchers --name phone --mode any \
+  --match-severity warning --match-severity error \
+  --match-field exact:type=system-mail --target ha-push
+```
+
+Info notifications (e.g. a successful vzdump) still go only to the
+`mail-to-root` target, so they stay on the host. Test:
+`pvesh create /cluster/notifications/targets/ha-push/test`, or the real path:
+`echo test | mail -s test root`.
+
 ## Logs → VictoriaLogs
 
 Vector on the host forwards the systemd journal to Vector on docker-host
