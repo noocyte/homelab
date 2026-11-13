@@ -16,6 +16,18 @@
   prCreation: 'not-pending',
   internalChecksAsSuccess: true,
 
+  customManagers: [
+    {
+      // compose/immich/example.env: IMMICH_VERSION=v3.4.1
+      customType: 'regex',
+      managerFilePatterns: ['/^compose/immich/example\\.env$/'],
+      matchStrings: ['IMMICH_VERSION=(?<currentValue>v\\d+\\.\\d+\\.\\d+)'],
+      depNameTemplate: 'immich-app/immich',
+      datasourceTemplate: 'github-releases',
+      versioningTemplate: 'semver',
+    },
+  ],
+
   packageRules: [
     {
       // Major versions (Postgres 17 → 18, Mosquitto 1.6 → 2, ...) only after
@@ -76,10 +88,22 @@
       enabled: false,
     },
     {
-      // Immich: versions via IMMICH_VERSION, on the Immich/Plex VM, and
-      // Immich pins its own valkey/postgres per release.
+      // Immich pins its own valkey/postgres digests per release: those come
+      // with the release's docker-compose.yml, not from Renovate.
       matchFileNames: ['compose/immich/**'],
+      matchManagers: ['docker-compose'],
       enabled: false,
+    },
+    {
+      // Immich itself: IMMICH_VERSION in example.env (customManagers above),
+      // followed via GitHub releases (they have dates; -rc tags are skipped).
+      // Not a Komodo stack - merging deploys nothing; upgrade VM 102 by hand.
+      matchDepNames: ['immich-app/immich'],
+      minimumReleaseAge: '3 days',   // fix releases often follow within a day
+      addLabels: ['manual deploy'],
+      prBodyNotes: [
+        '**Immich is not a Komodo stack: merging deploys nothing.** Before merging, follow `compose/immich/README.md` → Upgrading: read the release notes of every version in between, diff the release\'s `docker-compose.yml` / `hwaccel.*.yml` / `example.env` against this repo and add the changes to this PR, then upgrade VM 102 with a snapshot.',
+      ],
     },
     {
       // Our own images (:latest, built elsewhere).
