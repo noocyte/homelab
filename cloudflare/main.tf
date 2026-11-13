@@ -15,6 +15,7 @@ locals {
   home_ip_list_id = "978a91ff-797a-44cd-8f77-785c3848b719"
 
   apps        = { for a in var.apps : a.key => a }
+  icon_cdn    = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png"
   family_apps = { for k, a in local.apps : k => a if a.access == "family" }
 }
 
@@ -74,6 +75,14 @@ resource "cloudflare_zero_trust_access_policy" "at_cabin" {
   include          = [{ ip = { ip = "${var.cabin_ip}/32" } }]
 }
 
+resource "cloudflare_zero_trust_access_policy" "admins" {
+  account_id       = local.account_id
+  name             = "Admins"
+  decision         = "allow"
+  session_duration = "24h"
+  include          = [for e in var.admin_emails : { email = { email = e } }]
+}
+
 resource "cloudflare_zero_trust_access_policy" "family" {
   account_id       = local.account_id
   name             = "Familien"
@@ -90,25 +99,23 @@ resource "cloudflare_zero_trust_access_application" "app" {
   type                       = "self_hosted"
   domain                     = each.value.hostname
   destinations               = [{ type = "public", uri = each.value.hostname }]
-  session_duration           = each.value.session
+  session_duration           = each.value.tier == "admin" ? "24h" : "730h"
   app_launcher_visible       = true
   auto_redirect_to_identity  = false
   enable_binding_cookie      = false
-  http_only_cookie_attribute = each.value.http_only
+  http_only_cookie_attribute = true
   options_preflight_bypass   = false
-  skip_interstitial          = each.value.skip_interstitial
-  logo_url                   = each.value.logo
+  skip_interstitial          = true
+  logo_url                   = startswith(each.value.icon, "https://") ? each.value.icon : "${local.icon_cdn}/${each.value.icon}.png"
 
-  # Home apps: bypass at home, family login elsewhere. Cabin apps: bypass at
-  # the cabin and at home, family login elsewhere.
-  policies = each.value.tunnel == "cabin" ? [
-    { id = cloudflare_zero_trust_access_policy.at_cabin.id, precedence = 1 },
-    { id = cloudflare_zero_trust_access_policy.at_home.id, precedence = 2 },
-    { id = cloudflare_zero_trust_access_policy.family.id, precedence = 3 },
-    ] : [
-    { id = cloudflare_zero_trust_access_policy.at_home.id, precedence = 1 },
-    { id = cloudflare_zero_trust_access_policy.family.id, precedence = 2 },
-  ]
+  # admin: admin emails only, no bypass. app: bypass at home (and at the
+  # cabin for cabin apps), family emails elsewhere.
+  policies = each.value.tier == "admin" ? [
+    { id = cloudflare_zero_trust_access_policy.admins.id, precedence = 1 },
+    ] : [for i, p in concat(
+      each.value.tunnel == "cabin" ? [cloudflare_zero_trust_access_policy.at_cabin.id] : [],
+      [cloudflare_zero_trust_access_policy.at_home.id, cloudflare_zero_trust_access_policy.family.id],
+  ) : { id = p, precedence = i + 1 }]
 }
 
 resource "cloudflare_zero_trust_access_application" "launcher" {
