@@ -32,6 +32,3 @@ export AWS_ENDPOINT_URL_S3=https://4f02188557b4bf21d237feb6eaf4a940.r2.cloudflar
 export TF_VAR_family_emails='["..."]'
 tofu init && tofu plan
 ```
-
-`imports.tf` took over the pre-existing resources (2026-11-13, plan showed
-24 to import, 0 to change). It can be deleted after the first apply.
