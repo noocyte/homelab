@@ -306,6 +306,7 @@ redeploying the backup stack between 02:30 and ~03:15.
 | 8080 | Pi-hole admin (`/admin`) |
 | 9120 | Komodo |
 | 8300 | trip-planner |
+| 3010 | Immich Public Proxy (shared links, public via share.famnygaard.com) |
 | 8200 | weatherrouter |
 | 4000 / 3000 | TeslaMate / Grafana |
 | 1883 | Mosquitto (MQTT) |
