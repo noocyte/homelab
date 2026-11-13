@@ -51,3 +51,7 @@ weekly vzdump image of VM 102.
   variables v3 dropped. Migrations OK, smart search on CUDA. Snapshot
   `pre-immich-v3-3-6`; old files in `/home/jarle/immich-app/old-v2.7.5/`.
   Version pinned from then on.
+- 2026-11-13: v3.3.6 → v3.4.1. Upstream compose: new Valkey digest and
+  `MACHINE_LEARNING_MODEL_REVISION: v2` (newer ONNX exports of the same models,
+  downloaded once into `/cache/<task>/<model>/v2`). No `.env` or hwaccel changes.
+  Snapshot `pre-immich-v3-4-1`.
