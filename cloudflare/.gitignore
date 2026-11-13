@@ -1,0 +1,6 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+backend_override.tf
+secrets.auto.tfvars.json

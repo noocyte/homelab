@@ -1,0 +1,69 @@
+name: cloudflare
+
+on:
+  pull_request:
+    paths: ["cloudflare/**", ".github/workflows/cloudflare.yml"]
+  push:
+    branches: [main]
+    paths: ["cloudflare/**", ".github/workflows/cloudflare.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-tofu
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  TF_VAR_family_emails: ${{ secrets.CLOUDFLARE_FAMILY_EMAILS }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+  AWS_ENDPOINT_URL_S3: https://4f02188557b4bf21d237feb6eaf4a940.r2.cloudflarestorage.com
+  TF_IN_AUTOMATION: "1"
+
+defaults:
+  run:
+    working-directory: cloudflare
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_wrapper: false
+      - run: tofu init -input=false
+      - run: tofu fmt -check -recursive
+      - id: plan
+        run: |
+          set -o pipefail
+          tofu plan -input=false -no-color -lock=false | tee plan.txt
+          grep -E '^(Plan:|No changes)' plan.txt | head -1 > summary.txt || true
+      - name: Comment the plan on the PR
+        if: always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const read = f => fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+            const plan = read('cloudflare/plan.txt');
+            const summary = read('cloudflare/summary.txt').trim() || 'plan failed - see the workflow log';
+            const body = `### Cloudflare plan: ${summary}\n<details><summary>Full plan</summary>\n\n\`\`\`\n${plan.slice(-60000)}\n\`\`\`\n</details>`;
+            await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+
+  apply:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: cloudflare
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_wrapper: false
+      - run: tofu init -input=false
+      - run: tofu apply -input=false -auto-approve -no-color
