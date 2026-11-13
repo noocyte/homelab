@@ -126,7 +126,7 @@ services:
       - /srv/teslamate/mosquitto/data:/mosquitto/data
 
   saic2postgresql:
-    image: noocyte/saic2postgresql:v0.1.4   # Renovate PRs; releases via release-please in the app repo
+    image: noocyte/saic2postgresql:v0.1.4
     container_name: saic2postgresql
     restart: unless-stopped
     depends_on:
