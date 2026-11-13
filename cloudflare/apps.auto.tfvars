@@ -2,102 +2,107 @@
 # Edit this file to add, change or remove an app; a PR shows the plan,
 # merging applies it.
 #
-#   access = "family"  behind Cloudflare Access (no login at home / at the
-#                      cabin, family emails elsewhere)
+#   access = "family"  behind Cloudflare Access, with
+#     tier = "app"     no login at home / at the cabin, family login
+#                      elsewhere, 30-day session
+#     tier = "admin"   admin login only, always (also at home), 24h session
 #   access = "public"  no Access at all - must be written out explicitly
+#
+#   icon = name in github.com/homarr-labs/dashboard-icons, or a full URL
 
 apps = [
   {
-    key       = "teslamate"
-    name      = "Teslamate"
-    hostname  = "teslamate.torvmyrvegen20.net"
-    service   = "http://192.168.0.240:4000"
-    access    = "family"
-    session   = "730h"
-    logo      = "https://docs.teslamate.org/img/logo.svg"
-    http_only = true
+    key      = "teslamate"
+    name     = "TeslaMate"
+    hostname = "teslamate.torvmyrvegen20.net"
+    service  = "http://192.168.0.240:4000"
+    access   = "family"
+    tier     = "app"
+    icon     = "teslamate"
   },
   {
-    key            = "loxone"
-    name           = "Loxone"
-    hostname       = "loxone.torvmyrvegen20.net"
-    service        = "http://192.168.0.102"
-    access         = "family"
-    session        = "730h"
-    logo           = "https://www.loxone.com/enen/wp-content/uploads/sites/3/2020/07/ic-house.png"
-    http_only      = true
-    origin_request = {}
+    key      = "loxone"
+    name     = "Loxone"
+    hostname = "loxone.torvmyrvegen20.net"
+    service  = "http://192.168.0.102"
+    access   = "family"
+    tier     = "app"
+    icon     = "loxone"
   },
   {
-    key       = "grafana"
-    name      = "Grafana"
-    hostname  = "grafana.torvmyrvegen20.net"
-    service   = "http://192.168.0.240:3000"
-    access    = "family"
-    session   = "730h"
-    logo      = "https://www.clipartmax.com/png/small/450-4503037_grafana-prometheus-grafana-logo.png"
-    http_only = true
+    key      = "grafana"
+    name     = "Grafana"
+    hostname = "grafana.torvmyrvegen20.net"
+    service  = "http://192.168.0.240:3000"
+    access   = "family"
+    tier     = "app"
+    icon     = "grafana"
   },
   {
-    key               = "ha"
-    name              = "Home Assistant"
-    hostname          = "ha.torvmyrvegen20.net"
-    service           = "http://192.168.0.63:8123"
-    access            = "family"
-    session           = "730h"
-    logo              = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Home_Assistant_Logo.svg/1200px-Home_Assistant_Logo.svg.png"
-    http_only         = true
-    skip_interstitial = true
-    origin_request    = { http_host_header = "" }
+    key      = "ha"
+    name     = "Home Assistant"
+    hostname = "ha.torvmyrvegen20.net"
+    service  = "http://192.168.0.63:8123"
+    access   = "family"
+    tier     = "app"
+    icon     = "home-assistant"
   },
   {
-    key       = "pihole"
-    name      = "PiHole"
-    hostname  = "pihole.torvmyrvegen20.net"
-    service   = "http://192.168.0.240:8080"
-    access    = "family"
-    logo      = "https://banner2.cleanpng.com/20180724/wwt/kisspng-pi-hole-orange-pi-armbian-openshift-clip-art-5b56c42921b764.4342493115324129691381.jpg"
-    http_only = true
+    key      = "pihole"
+    name     = "Pi-hole"
+    hostname = "pihole.torvmyrvegen20.net"
+    service  = "http://192.168.0.240:8080"
+    access   = "family"
+    tier     = "admin"
+    icon     = "pi-hole"
   },
   {
     key            = "crafty"
-    name           = "crafty"
+    name           = "Crafty"
     hostname       = "crafty.torvmyrvegen20.net"
     service        = "https://192.168.0.240:8443"
     access         = "family"
+    tier           = "admin"
+    icon           = "crafty-controller"
     origin_request = { no_tls_verify = true }
   },
   {
     key      = "trip"
-    name     = "trip"
+    name     = "TRIP"
     hostname = "trip.famnygaard.com"
     service  = "http://192.168.0.240:8300"
     access   = "family"
+    tier     = "app"
+    icon     = "https://cdn.jsdelivr.net/gh/itskovacs/trip@main/src/public/favicon.png"
   },
   {
     key            = "proxmox"
-    name           = "proxmox"
+    name           = "Proxmox"
     hostname       = "proxmox.torvmyrvegen20.net"
     service        = "https://192.168.0.107:8006"
     access         = "family"
+    tier           = "admin"
+    icon           = "proxmox"
     origin_request = { http2_origin = true, no_tls_verify = true }
   },
   {
     key      = "komodo"
-    name     = "komodo"
+    name     = "Komodo"
     hostname = "komodo.torvmyrvegen20.net"
     service  = "http://192.168.0.240:9120"
     access   = "family"
+    tier     = "admin"
+    icon     = "komodo"
   },
   {
     key      = "photos"
-    name     = "photos"
+    name     = "Immich"
     hostname = "photos.famnygaard.com"
     service  = "http://192.168.0.52:2283"
     access   = "family"
-    session  = "730h"
+    tier     = "app"
+    icon     = "immich"
   },
-
   {
     key            = "cabin_ha"
     name           = "Home Assistant (hytta)"
@@ -105,9 +110,8 @@ apps = [
     service        = "http://homeassistant:8123"
     tunnel         = "cabin"
     access         = "family"
-    session        = "730h"
-    logo           = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Home_Assistant_Logo.svg/1200px-Home_Assistant_Logo.svg.png"
-    http_only      = true
+    tier           = "app"
+    icon           = "home-assistant"
     origin_request = { no_tls_verify = true }
   },
 ]
