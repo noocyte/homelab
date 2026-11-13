@@ -62,7 +62,7 @@ apps = [
     hostname       = "crafty.torvmyrvegen20.net"
     service        = "https://192.168.0.240:8443"
     access         = "family"
-    tier           = "admin"
+    tier           = "app"
     icon           = "crafty-controller"
     origin_request = { no_tls_verify = true }
   },

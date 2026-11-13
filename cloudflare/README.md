@@ -32,7 +32,7 @@ Not managed here: the tunnels themselves (their tokens live in Komodo, stack
 | Secret | What |
 |---|---|
 | `CLOUDFLARE_API_TOKEN` | API token `homelab-opentofu`: Account - Cloudflare Tunnel Edit, Access: Apps and Policies Edit, Access: Organizations, Identity Providers, and Groups Read, Account Settings Read; Zone (torvmyrvegen20.net, famnygaard.com, fossanhagen38.com) - DNS Edit, Zone Edit |
-| `CLOUDFLARE_ADMIN_EMAILS` | JSON list of the "Admins" emails (tier `admin`: Proxmox, Komodo, Crafty, Pi-hole). Never in git. |
+| `CLOUDFLARE_ADMIN_EMAILS` | JSON list of the "Admins" emails (tier `admin`: Proxmox, Komodo, Pi-hole). Never in git. |
 | `CLOUDFLARE_CABIN_IP` | The cabin's public IPv4 (no `/32`). If it changes, the cabin just gets the family login until this is updated. |
 | `CLOUDFLARE_FAMILY_EMAILS` | JSON list of the "Familien" emails, e.g. `["a@example.com","b@example.com"]`. Never in git: the repo is public. |
 | `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | R2 API token, Object Read & Write on bucket `homelab-tofu-state` (holds the state) |
