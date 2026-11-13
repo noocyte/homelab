@@ -110,5 +110,12 @@
       matchPackageNames: ['noocyte/**'],
       enabled: false,
     },
+    {
+      // Except saic2postgresql: versioned releases (release-please + GitHub
+      // Actions in noocyte/saic2postgresql). Our own code, so no age wait.
+      matchPackageNames: ['noocyte/saic2postgresql'],
+      enabled: true,
+      minimumReleaseAge: null,
+    },
   ],
 }
