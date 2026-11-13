@@ -14,6 +14,10 @@
 # the admin console (machines → docker-host): approve the subnet route and
 # the exit node, and "Disable key expiry".
 #
+# Check after a deploy: `docker exec tailscale tailscale status` must show no
+# iptables health warning, and `sudo nft list ruleset | grep ts-` must list
+# Tailscale's chains (ts-postrouting does the SNAT).
+#
 # IPv4 only: the LAN has no public IPv6, so IPv6 forwarding stays off (the
 # "IPv6 forwarding is disabled" warning in the log is expected).
 services:
@@ -38,3 +42,8 @@ services:
       - TS_EXTRA_ARGS=--advertise-exit-node
       - TS_SERVE_CONFIG=/serve/serve.json
       - TS_ACCEPT_DNS=false     # the VM keeps 1.1.1.1 (see flatcar/docker-host.bu)
+      # Flatcar's kernel has nftables only; auto-detect picked iptables-legacy,
+      # failed ("can't initialize iptables table `filter'") and installed no
+      # rules at all - no SNAT, so LAN hosts' replies to 100.x went to the
+      # router and subnet routing/exit node silently broke (2026-11-13).
+      - TS_DEBUG_FIREWALL_MODE=nftables
