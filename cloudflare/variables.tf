@@ -1,10 +1,11 @@
 variable "apps" {
-  description = "Apps exposed through the home tunnel. Order = order of the tunnel's ingress rules."
+  description = "Apps exposed through the tunnels. Order = order of each tunnel's ingress rules."
   type = list(object({
     key      = string
     name     = string
     hostname = string
     service  = string
+    tunnel   = optional(string, "home") # "home" (Hjemme) or "cabin" (homeassistant, at the cabin)
     # "family": behind Access (bypass from home, family emails elsewhere).
     # "public": no Access app. Must be written out; there is no default.
     access            = string
@@ -28,13 +29,23 @@ variable "apps" {
     error_message = "App keys and hostnames must be unique."
   }
   validation {
-    condition     = alltrue([for a in var.apps : endswith(a.hostname, ".torvmyrvegen20.net") || endswith(a.hostname, ".famnygaard.com")])
-    error_message = "Hostnames must be in torvmyrvegen20.net or famnygaard.com (the zones this config manages)."
+    condition     = alltrue([for a in var.apps : contains(["home", "cabin"], a.tunnel)])
+    error_message = "tunnel must be \"home\" or \"cabin\"."
+  }
+  validation {
+    condition     = alltrue([for a in var.apps : endswith(a.hostname, ".torvmyrvegen20.net") || endswith(a.hostname, ".famnygaard.com") || endswith(a.hostname, ".fossanhagen38.com")])
+    error_message = "Hostnames must be in torvmyrvegen20.net, famnygaard.com or fossanhagen38.com (the zones this config manages)."
   }
 }
 
 variable "family_emails" {
   description = "Emails allowed by the Familien policy. Secret: TF_VAR_family_emails (JSON list), never in git."
   type        = list(string)
+  sensitive   = true
+}
+
+variable "cabin_ip" {
+  description = "The cabin's public IPv4 address (\"At Cabin\" bypass). Secret: TF_VAR_cabin_ip, not in git."
+  type        = string
   sensitive   = true
 }

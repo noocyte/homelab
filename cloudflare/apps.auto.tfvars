@@ -1,8 +1,9 @@
-# Apps exposed through the home tunnel ("Hjemme"). Edit this file to add,
-# change or remove an app; a PR shows the plan, merging applies it.
+# Apps exposed through the tunnels (tunnel = "home" by default, or "cabin").
+# Edit this file to add, change or remove an app; a PR shows the plan,
+# merging applies it.
 #
-#   access = "family"  behind Cloudflare Access (no login from home,
-#                      family emails elsewhere)
+#   access = "family"  behind Cloudflare Access (no login at home / at the
+#                      cabin, family emails elsewhere)
 #   access = "public"  no Access at all - must be written out explicitly
 
 apps = [
@@ -95,5 +96,18 @@ apps = [
     service  = "http://192.168.0.52:2283"
     access   = "family"
     session  = "730h"
+  },
+
+  {
+    key            = "cabin_ha"
+    name           = "Home Assistant (hytta)"
+    hostname       = "ha.fossanhagen38.com"
+    service        = "http://homeassistant:8123"
+    tunnel         = "cabin"
+    access         = "family"
+    session        = "730h"
+    logo           = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Home_Assistant_Logo.svg/1200px-Home_Assistant_Logo.svg.png"
+    http_only      = true
+    origin_request = { no_tls_verify = true }
   },
 ]

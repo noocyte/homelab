@@ -1,10 +1,14 @@
 locals {
   account_id = "4f02188557b4bf21d237feb6eaf4a940"
-  tunnel_id  = "338d43a8-bf5f-4033-b58f-3d28c333cb21" # "Hjemme"
+  tunnels = {
+    home  = "338d43a8-bf5f-4033-b58f-3d28c333cb21" # "Hjemme"
+    cabin = "7b46b6f7-4d5d-4cd1-90ad-e625a2bb9769" # "homeassistant", Cloudflared add-on on the cabin's HA
+  }
 
   zones = {
     "torvmyrvegen20.net" = "fa12857d3a971efda0532903f25360ba"
     "famnygaard.com"     = "445df082415c92bbe6ceda4de0295dc4"
+    "fossanhagen38.com"  = "87f01f50703dadaaf2da82cc3a04e6bc"
   }
 
   # Zero Trust list "At Home" (home IP), managed in the dashboard.
@@ -16,9 +20,11 @@ locals {
 
 # --- Tunnel routes ---------------------------------------------------------
 
-resource "cloudflare_zero_trust_tunnel_cloudflared_config" "home" {
+resource "cloudflare_zero_trust_tunnel_cloudflared_config" "tunnel" {
+  for_each = local.tunnels
+
   account_id = local.account_id
-  tunnel_id  = local.tunnel_id
+  tunnel_id  = each.value
 
   config = {
     ingress = concat(
@@ -26,10 +32,15 @@ resource "cloudflare_zero_trust_tunnel_cloudflared_config" "home" {
         hostname       = a.hostname
         service        = a.service
         origin_request = a.origin_request
-      }],
+      } if a.tunnel == each.key],
       [{ service = "http_status:404" }],
     )
   }
+}
+
+moved {
+  from = cloudflare_zero_trust_tunnel_cloudflared_config.home
+  to   = cloudflare_zero_trust_tunnel_cloudflared_config.tunnel["home"]
 }
 
 # --- DNS -------------------------------------------------------------------
@@ -40,7 +51,7 @@ resource "cloudflare_dns_record" "app" {
   zone_id = one([for z, id in local.zones : id if endswith(each.value.hostname, ".${z}")])
   name    = each.value.hostname
   type    = "CNAME"
-  content = "${local.tunnel_id}.cfargotunnel.com"
+  content = "${local.tunnels[each.value.tunnel]}.cfargotunnel.com"
   proxied = true
   ttl     = 1
 }
@@ -53,6 +64,14 @@ resource "cloudflare_zero_trust_access_policy" "at_home" {
   decision         = "bypass"
   session_duration = "24h"
   include          = [{ ip_list = { id = local.home_ip_list_id } }]
+}
+
+resource "cloudflare_zero_trust_access_policy" "at_cabin" {
+  account_id       = local.account_id
+  name             = "At Cabin"
+  decision         = "bypass"
+  session_duration = "24h"
+  include          = [{ ip = { ip = "${var.cabin_ip}/32" } }]
 }
 
 resource "cloudflare_zero_trust_access_policy" "family" {
@@ -80,7 +99,13 @@ resource "cloudflare_zero_trust_access_application" "app" {
   skip_interstitial          = each.value.skip_interstitial
   logo_url                   = each.value.logo
 
-  policies = [
+  # Home apps: bypass at home, family login elsewhere. Cabin apps: bypass at
+  # the cabin and at home, family login elsewhere.
+  policies = each.value.tunnel == "cabin" ? [
+    { id = cloudflare_zero_trust_access_policy.at_cabin.id, precedence = 1 },
+    { id = cloudflare_zero_trust_access_policy.at_home.id, precedence = 2 },
+    { id = cloudflare_zero_trust_access_policy.family.id, precedence = 3 },
+    ] : [
     { id = cloudflare_zero_trust_access_policy.at_home.id, precedence = 1 },
     { id = cloudflare_zero_trust_access_policy.family.id, precedence = 2 },
   ]

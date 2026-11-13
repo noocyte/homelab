@@ -19,6 +19,7 @@ permissions:
 env:
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   TF_VAR_family_emails: ${{ secrets.CLOUDFLARE_FAMILY_EMAILS }}
+  TF_VAR_cabin_ip: ${{ secrets.CLOUDFLARE_CABIN_IP }}
   AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
   AWS_ENDPOINT_URL_S3: https://4f02188557b4bf21d237feb6eaf4a940.r2.cloudflarestorage.com
