@@ -114,4 +114,11 @@ apps = [
     icon           = "home-assistant"
     origin_request = { no_tls_verify = true }
   },
+  {
+    key      = "share"
+    name     = "Immich shared links"
+    hostname = "share.famnygaard.com"
+    service  = "http://192.168.0.240:3010"
+    access   = "public"
+  },
 ]

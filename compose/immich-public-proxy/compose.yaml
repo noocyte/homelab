@@ -1,0 +1,25 @@
+# Immich Public Proxy (https://docs.ipp.nz): serves only Immich's shared
+# links, on https://share.famnygaard.com (Cloudflare tunnel, access "public").
+# photos.famnygaard.com stays behind Cloudflare Access. IPP has read-only
+# access to Immich and stores nothing.
+#
+# Immich: Administration → Settings → Server → External domain =
+# https://share.famnygaard.com, so new share links point here.
+services:
+  immich-public-proxy:
+    image: alangrainger/immich-public-proxy:4.1.2
+    restart: unless-stopped
+    ports:
+      - "3010:3000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges
+    environment:
+      PUBLIC_BASE_URL: https://share.famnygaard.com
+      IMMICH_URL: http://192.168.0.52:2283
+    healthcheck:
+      test: curl -sf -m 4 http://localhost:3000/share/healthcheck -o /dev/null || exit 1
+      start_period: 10s
+      timeout: 5s

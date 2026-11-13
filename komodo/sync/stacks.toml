@@ -239,3 +239,13 @@ TESLAMATE_ABRP_TOKEN = [[TESLAMATE_ABRP_TOKEN]]
 TESLAMATE_SAIC_TOPIC_PREFIX = [[TESLAMATE_SAIC_TOPIC_PREFIX]]
 TESLAMATE_SAIC_DB_URI = [[TESLAMATE_SAIC_DB_URI]]
 """
+
+[[stack]]
+name = "immich-public-proxy"
+deploy = true
+tags = ["apps", "gitops"]
+[stack.config]
+server = "docker-host"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/immich-public-proxy"
