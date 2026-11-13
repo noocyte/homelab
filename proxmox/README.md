@@ -166,6 +166,44 @@ History: 2026-11-04 the journal went straight to VictoriaLogs with
 `systemd-journal-upload` (package `systemd-journal-remote`); replaced by
 Vector on 2026-11-05 so all sources share one schema.
 
+## Freeze recovery: hardware watchdog + panic on lockup
+
+Added 2026-11-13, after the host froze at ~06:30 with nothing in the journal
+and stayed dead until it was reset by hand at 14:57. These settings don't fix a
+freeze; they make the host reboot by itself and try to leave a trace.
+
+```sh
+# Chipset watchdog (Lynx Point TCO). systemd (PID 1) feeds it; if the host
+# hangs for 60 s the board resets it. watchdog-mux is unused (no PVE HA) -
+# if HA is ever enabled, set WATCHDOG_MODULE=iTCO_wdt in
+# /etc/default/pve-ha-manager and remove RuntimeWatchdogSec, since only one
+# process can hold /dev/watchdog.
+echo iTCO_wdt > /etc/modules-load.d/watchdog.conf
+mkdir -p /etc/systemd/system.conf.d
+cat > /etc/systemd/system.conf.d/watchdog.conf <<'EOF'
+[Manager]
+RuntimeWatchdogSec=60s
+RebootWatchdogSec=10min
+EOF
+
+# Soft/hard lockups and oopses become a panic; reboot 10 s after a panic.
+cat > /etc/sysctl.d/90-lockup-panic.conf <<'EOF'
+kernel.softlockup_panic = 1
+kernel.hardlockup_panic = 1
+kernel.panic_on_oops = 1
+kernel.panic = 10
+EOF
+modprobe iTCO_wdt && sysctl --system && systemctl daemon-reexec
+```
+
+Check: `dmesg | grep -i watchdog` shows "Using hardware watchdog 'iTCO_wdt'",
+`cat /sys/class/watchdog/watchdog0/state` is `active`.
+
+After an unexpected reboot: the panic message (if the kernel got that far) is
+saved in EFI pstore (`efi_pstore` backend) and copied to
+`/var/lib/systemd/pstore/` at boot; `last -x` shows "crash" for the previous
+boot. A silent hardware hang only trips the watchdog and leaves no message.
+
 ## VM 102 notes
 
 - `qemu-guest-agent` runs inside the VM (installed 2026-11-03), so backups
