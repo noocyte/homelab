@@ -20,6 +20,7 @@ services:
       UP_UNIFI_DEFAULT_VERIFY_SSL: "false"     # self-signed cert on the UDR
       UP_UNIFI_DEFAULT_SAVE_SITES: "true"
       UP_UNIFI_DEFAULT_SAVE_DPI: "true"
+      UP_UNIFI_DEFAULT_SKIP_DEVICE_TAGS: "true"
       UP_INFLUXDB_DISABLE: "true"              # Prometheus output only
       UP_PROMETHEUS_HTTP_LISTEN: 0.0.0.0:9130
       UP_POLLER_QUIET: "true"                  # only startup + errors in the log
