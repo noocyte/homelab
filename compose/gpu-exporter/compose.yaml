@@ -12,7 +12,7 @@
 # fails and the dashboard's "GPU driver" panel turns red.
 services:
   nvidia-gpu-exporter:
-    image: utkuozdemir/nvidia_gpu_exporter:1.16.0
+    image: utkuozdemir/nvidia_gpu_exporter:1.17.0
     container_name: nvidia_gpu_exporter
     restart: unless-stopped
     ports:
