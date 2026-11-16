@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily cleanup of VM 102 auto-patch snapshots
+
+[Timer]
+OnCalendar=*-*-* 05:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

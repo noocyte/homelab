@@ -1,0 +1,8 @@
+[Unit]
+Description=Patch VM 102: snapshot, apt full-upgrade, reboot, health check
+After=pve-guests.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vm-patch.sh patch
+TimeoutStartSec=2h

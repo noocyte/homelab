@@ -1,0 +1,6 @@
+[Unit]
+Description=Delete VM 102 auto-patch snapshots older than 5 days
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vm-patch.sh prune
