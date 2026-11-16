@@ -246,3 +246,46 @@ boot. A silent hardware hang only trips the watchdog and leaves no message.
   curl -fsSLO https://raw.githubusercontent.com/noocyte/homelab/main/compose/gpu-exporter/compose.yaml
   docker compose up -d
   ```
+
+## VM 102: monthly patching
+
+Since 2026-11-16 the host patches VM 102 by itself at **03:00 on the second
+Sunday of the month** (after the Sunday 01:00 image backup). Unattended
+upgrades inside the VM still install security updates nightly; this run also
+takes the rest (Ubuntu `-updates`, Docker, the NVIDIA container toolkit),
+which otherwise pile up.
+
+`vm-patch.sh patch` (from `vm-patch.timer`):
+
+1. Disk snapshot `auto-patch-YYYYMMDD` (no RAM state; works with the GPU and
+   virtiofs attached, the guest agent freezes the filesystem for it). It
+   covers the VM disk only, not the virtiofs shares on the ZFS pool.
+2. `apt-get update && apt-get full-upgrade` inside the VM through the guest
+   agent (keeps existing config files; no `autoremove`, see the driver note
+   above). Apt log in the VM: `/var/log/vm-patch-apt.log`.
+3. Reboots the VM when something was upgraded or a reboot is required.
+4. Waits until `nvidia-smi`, Plex (`:32400/identity`), Immich
+   (`:2283/api/server/ping`) and the GPU exporter (`:9835`) answer.
+5. Mails root, which the `phone` matcher pushes to the phone:
+   "VM 102 patched OK" or "VM 102 patch FAILED" with the reason. A failed
+   run never rolls back by itself.
+
+`vm-patch.sh prune` (from `vm-patch-prune.timer`, daily 05:30) deletes
+`auto-patch-*` snapshots older than 5 days. A snapshot from a failed run is
+kept until you decide: roll back with `qm rollback 102 auto-patch-YYYYMMDD`,
+or remove it with `qm delsnapshot 102 auto-patch-YYYYMMDD` and
+`rm /var/lib/vm-patch/auto-patch-YYYYMMDD.failed`. Host log:
+`/var/log/vm-patch.log`.
+
+Install (from this folder):
+
+```sh
+install -m 755 vm-patch.sh /usr/local/sbin/vm-patch.sh
+install -m 644 systemd/vm-patch*.service systemd/vm-patch*.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now vm-patch.timer vm-patch-prune.timer
+systemctl list-timers 'vm-patch*'
+```
+
+Run by hand: `systemctl start vm-patch.service` (Plex and Immich are down for
+2–3 minutes during the reboot).
