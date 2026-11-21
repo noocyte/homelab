@@ -205,8 +205,7 @@ Immich is the exception: its library and DB dumps are synced straight from
 | `homeassistant/` | HA backups (encrypted by HA, ~1.5 GB each) | HA, ~05:30, over NFS (HA network storage `NASBACKUP`) | HA keeps 10 |
 | `proxmox/dump/` | VM 102 + LXC 100 whole images (vzdump, zstd) | Proxmox backup job, Sun 01:00 | 2 per guest |
 | `onedrive/<name>/` | personal OneDrive, one-way copy; deleted/changed files kept 30 days in `onedrive/.deleted/<date>/` | `compose/backup/onedrive.sh`, 02:00 | mirror of OneDrive |
-| `homeassistant-cabin/` | the cabin's Home Assistant backups (encrypted by HA, ~13 MB) | cabin HA, ~05:00, over Tailscale → Samba share `Cabin` (see Remote access) | HA's setting |
-| `onedrive/jarle/Apps/Home Assistant/backups_3bf5b0b4/` | second copy of the cabin's HA backups (HA also uploads them to jarle's OneDrive) | cabin HA → OneDrive; reaches us with the 02:00 copy | HA's setting, + 30 days in `.deleted/` |
+| `homeassistant-cabin/` | the cabin's Home Assistant backups (encrypted by HA, ~13 MB) | cabin HA, 01:00, over Tailscale → Samba share `Cabin` (see Remote access) | HA's setting |
 | `crafty/nightly/` | Crafty DB + config + all Minecraft servers | `compose/crafty/backup.py`, 02:40 | 14 days |
 | `crafty/server-backups/` | Crafty's own per-server backups | Crafty's UI | Crafty's setting |
 | `proxmox/host/` | Proxmox host config | `proxmox/pve-config-backup.sh`, 01:30 | 14 days |
@@ -224,7 +223,7 @@ can't wipe Jotta.
 and reads when each folder last reached Jotta (`backup.sh` writes
 `/srv/rclone/status/offsite-<folder>` after a good sync; `onedrive.sh` writes
 `onedrive/.status-<name>`). A backup is **late** when its newest file is
-older than its interval + 4 h (daily 28 h, cabin HA via OneDrive 52 h, vzdump 7 d 4 h); off-site when a
+older than its interval + 4 h (daily 28 h, vzdump 7 d 4 h); off-site when a
 folder hasn't reached Jotta for 36 h.
 
 - **Grafana → Backups**: status table per job, off-site table, sizes over time
@@ -486,7 +485,9 @@ Set up for the cabin (by hand, outside git):
 - Cabin HA, Tailscale app: `advertise_tags: [tag:cabin]`, `accept_routes`
   and `accept_dns` off, `userspace_networking` off. Network storage (Backup):
   Samba, server `100.82.192.66`, share `Cabin`, user `cabin`. Backup
-  locations: this + OneDrive.
+  location: only this (OneDrive removed 2026-11-21). Only
+  `automatic_backup_*.tar` counts for the status check; add-on update
+  backups land in the same folder.
 
 ## Backup DNS (secondpi)
 
