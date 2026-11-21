@@ -12,6 +12,8 @@ Proxmox (192.168.0.107, "pve")             ← managed by hand, NOT updated (NVI
  └─ VM 200  docker-host  Flatcar (.240)    ← THIS REPO
      ├─ komodo.service   Komodo Core + Periphery (started by the OS)
      └─ Komodo stacks    everything in compose/ (deployed by Komodo from git)
+
+secondpi (Raspberry Pi 3 B+, .185)         ← backup Pi-hole, Komodo Periphery
 ```
 
 | Path | What |
@@ -485,6 +487,30 @@ Set up for the cabin (by hand, outside git):
   and `accept_dns` off, `userspace_networking` off. Network storage (Backup):
   Samba, server `100.82.192.66`, share `Cabin`, user `cabin`. Backup
   locations: this + OneDrive.
+
+## Backup DNS (secondpi)
+
+Two Pi-holes run the same `compose/pihole` stack from git: `pihole` on
+docker-host (.240) and `pihole-secondpi` on **secondpi** (192.168.0.185,
+Raspberry Pi 3 B+, Raspberry Pi OS / Debian 13). Same settings, lists and
+local names, because the files are the same; nothing syncs between them at
+runtime, and each keeps its own query log. Both exporters are scraped
+(`192.168.0.185:9617` too). UniFi hands out both addresses as DNS servers.
+
+secondpi is set up by hand once (not Flatcar, no Ignition):
+
+1. Debian's Docker: `sudo apt install docker.io docker-compose`.
+2. Komodo Periphery: copy `komodo/periphery/compose.yaml` to
+   `/opt/komodo-periphery/` and add a `.env` with `SERVER_NAME=secondpi`
+   and, on first start only, `ONBOARDING_KEY=<private key>` from Komodo →
+   Settings → Onboarding keys. `sudo docker compose up -d`. Periphery
+   connects out to Core (`ws://192.168.0.240:9120`) and creates the Server.
+   Then remove the key from `.env`, restart, and delete the key in Komodo.
+3. From then on Komodo deploys `pihole-secondpi` like any gitops stack.
+
+The Pi-hole that came with the Pi's OS image (installed natively) is
+stopped and disabled (`systemctl disable pihole-FTL`); a copy of its empty
+config is in `~/pihole-native-backup-2026-11-21.tgz` on the Pi.
 
 ## Not managed here (yet)
 

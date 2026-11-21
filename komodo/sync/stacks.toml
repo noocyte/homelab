@@ -57,6 +57,24 @@ PIHOLE_ADMIN_PASSWORD = [[PIHOLE_ADMIN_PASSWORD]]
 post_deploy.path = "."
 post_deploy.command = "sh lists.sh"
 
+# The same Pi-hole on secondpi (backup DNS). Identical files from git, so the
+# two never drift apart; nothing syncs between them at runtime.
+[[stack]]
+name = "pihole-secondpi"
+deploy = true
+tags = ["infra", "gitops"]
+[stack.config]
+server = "secondpi"
+repo = "noocyte/homelab"
+branch = "main"
+run_directory = "compose/pihole"
+config_files = [{ path = "lists.sh", requires = "redeploy" }]
+environment = """
+PIHOLE_ADMIN_PASSWORD = [[PIHOLE_ADMIN_PASSWORD]]
+"""
+post_deploy.path = "."
+post_deploy.command = "sh lists.sh"
+
 [[stack]]
 name = "cloudflare-ddns"
 deploy = true

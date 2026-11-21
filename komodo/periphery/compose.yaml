@@ -1,0 +1,29 @@
+# Komodo Periphery (agent) for extra servers, e.g. secondpi (backup Pi-hole).
+# Connects out to Core on docker-host. Started by hand on the server, see
+# komodo/periphery/README.md. Keep the version equal to Core in
+# komodo/compose.yaml.
+
+services:
+  periphery:
+    image: ghcr.io/moghtech/komodo-periphery:2.3.4
+    labels:
+      komodo.skip:
+    init: true
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Oslo
+      PERIPHERY_CORE_ADDRESS: ws://192.168.0.240:9120
+      PERIPHERY_CONNECT_AS: ${SERVER_NAME}
+      PERIPHERY_ONBOARDING_KEY: ${ONBOARDING_KEY:-}
+      PERIPHERY_CORE_PUBLIC_KEYS: file:/config/keys/core.pub
+      PERIPHERY_ROOT_DIRECTORY: /etc/komodo
+      PERIPHERY_INCLUDE_DISK_MOUNTS: /etc/hostname
+    volumes:
+      - keys:/config/keys
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/proc
+      - /etc/komodo:/etc/komodo
+      - /srv:/srv
+
+volumes:
+  keys:
