@@ -1,0 +1,612 @@
+blueprint:
+  name: Varmepumpe
+  description: >-
+    Styrer en luft-til-luft-varmepumpe etter romtemperatur: varme eller kjøling
+    velges av rommet, settpunkter fra en dag/natt-plan med avvik for Borte/Ferie,
+    dør åpen, festmodus og pause. Sender aldri `off`, men respekterer det.
+    Se README (Varmepumper) i noocyte/homelab.
+  domain: automation
+  source_url: https://github.com/noocyte/homelab/blob/main/homeassistant/blueprints/varmepumpe.yaml
+  input:
+    unit:
+      name: Varmepumpe og sensorer
+      input:
+        climate_entity:
+          name: Varmepumpe
+          selector:
+            entity:
+              filter:
+                - domain: climate
+        room_sensor:
+          name: Romtemperatur
+          description: Gjerne en sensorgruppe (snitt), så kan sensorer legges til uten å endre automasjonen.
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+                  device_class: temperature
+        door_sensors:
+          name: Dører/vinduer
+          description: Gjerne én binærsensorgruppe. Kan stå tom.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain:
+                    - binary_sensor
+                    - input_boolean
+        correction:
+          name: Korriger settpunkt
+          description: Sender settpunkt + (varmepumpens egen måling − rommet), avrundet.
+          default: true
+          selector:
+            boolean: {}
+        correction_max:
+          name: Maks korreksjon
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 5
+              step: 0.5
+              unit_of_measurement: °C
+        dry_run:
+          name: Testmodus
+          description: Sender ingenting til varmepumpen, skriver bare hva den ville gjort (status + logbok).
+          default: false
+          selector:
+            boolean: {}
+    schedule_section:
+      name: Plan og settpunkter
+      input:
+        schedule_entity:
+          name: Plan (på = dag, av = natt)
+          selector:
+            entity:
+              filter:
+                - domain: schedule
+        heat_day:
+          name: Varme dag
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        heat_night:
+          name: Varme natt
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        cool_threshold_day:
+          name: Kjølegrense dag
+          description: Bytter til kjøling når rommet har vært over dette en stund.
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        cool_threshold_night:
+          name: Kjølegrense natt
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        cool_day:
+          name: Kjøling dag
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        cool_night:
+          name: Kjøling natt
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        season_select:
+          name: Sesong (input_select)
+          selector:
+            entity:
+              filter:
+                - domain: input_select
+        season_heat_option:
+          name: Sesongvalg for varme
+          default: Varme
+          selector:
+            text: {}
+        season_cool_option:
+          name: Sesongvalg for kjøling
+          default: Kjøling
+          selector:
+            text: {}
+        cool_delay:
+          name: Tid over grensen før bytte
+          default: 15
+          selector:
+            number:
+              min: 1
+              max: 120
+              unit_of_measurement: min
+    house_section:
+      name: Husmodus
+      input:
+        house_mode:
+          name: Husmodus
+          selector:
+            entity:
+              filter:
+                - domain:
+                    - input_select
+                    - select
+        borte_state:
+          name: Verdi for Borte
+          default: Borte
+          selector:
+            text: {}
+        ferie_state:
+          name: Verdi for Ferie
+          default: Ferie
+          selector:
+            text: {}
+        borte_offset:
+          name: Avvik Borte
+          description: Trekkes fra varme, legges til kjøling og kjølegrense.
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        ferie_offset:
+          name: Avvik Ferie
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+    door_section:
+      name: Dør åpen
+      input:
+        door_heat:
+          name: Settpunkt ved varme
+          default: 12
+          selector:
+            number:
+              min: 10
+              max: 20
+              unit_of_measurement: °C
+        door_cool:
+          name: Settpunkt ved kjøling
+          default: 30
+          selector:
+            number:
+              min: 24
+              max: 32
+              unit_of_measurement: °C
+        door_open_delay:
+          name: Åpen i
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 30
+              unit_of_measurement: min
+        door_close_delay:
+          name: Lukket i
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 30
+              unit_of_measurement: min
+    party_section:
+      name: Fest og pause
+      input:
+        party_boolean:
+          name: Fest
+          selector:
+            entity:
+              filter:
+                - domain: input_boolean
+        party_until:
+          name: Fest til (dato og tid)
+          selector:
+            entity:
+              filter:
+                - domain: input_datetime
+        party_setpoint:
+          name: Festtemperatur
+          selector:
+            entity:
+              filter:
+                - domain: input_number
+        party_hours:
+          name: Festlengde
+          default: 4
+          selector:
+            number:
+              min: 1
+              max: 24
+              unit_of_measurement: t
+        pause_boolean:
+          name: Pause
+          selector:
+            entity:
+              filter:
+                - domain: input_boolean
+        status_text:
+          name: Status (input_text)
+          selector:
+            entity:
+              filter:
+                - domain: input_text
+    notify_section:
+      name: Varsler
+      input:
+        notify_targets:
+          name: Varsle
+          description: Notify-tjenester, f.eks. notify.mobile_app_telefon
+          default: []
+          selector:
+            text:
+              multiple: true
+        off_notify_delay:
+          name: Varsle når av i
+          default: 30
+          selector:
+            number:
+              min: 5
+              max: 240
+              unit_of_measurement: min
+        off_repeat:
+          name: Gjenta hvert
+          default: 120
+          selector:
+            number:
+              min: 15
+              max: 720
+              unit_of_measurement: min
+        pause_remind:
+          name: Påminnelse om pause etter
+          default: 24
+          selector:
+            number:
+              min: 1
+              max: 168
+              unit_of_measurement: t
+
+mode: parallel
+max: 10
+max_exceeded: silent
+
+trigger_variables:
+  t_climate: !input climate_entity
+  t_room: !input room_sensor
+  t_schedule: !input schedule_entity
+  t_house: !input house_mode
+  t_borte: !input borte_state
+  t_ferie: !input ferie_state
+  t_borte_offset: !input borte_offset
+  t_ferie_offset: !input ferie_offset
+  t_heat_day: !input heat_day
+  t_heat_night: !input heat_night
+  t_thr_day: !input cool_threshold_day
+  t_thr_night: !input cool_threshold_night
+
+triggers:
+  - trigger: homeassistant
+    event: start
+    id: start
+  - trigger: event
+    event_type: automation_reloaded
+    id: start
+  - trigger: state
+    entity_id: !input climate_entity
+    to: null
+    id: climate
+  - trigger: state
+    entity_id: !input season_select
+    to: null
+    id: season
+  - trigger: state
+    entity_id: !input pause_boolean
+    to: null
+    id: pause
+  - trigger: state
+    entity_id: !input party_boolean
+    to: "on"
+    id: party_on
+  - trigger: state
+    entity_id: !input party_boolean
+    to: "off"
+    id: party
+  - trigger: time
+    at: !input party_until
+    id: party_end
+  - trigger: state
+    entity_id:
+      - !input schedule_entity
+      - !input house_mode
+      - !input heat_day
+      - !input heat_night
+      - !input cool_threshold_day
+      - !input cool_threshold_night
+      - !input cool_day
+      - !input cool_night
+      - !input borte_offset
+      - !input ferie_offset
+      - !input party_setpoint
+      - !input party_until
+    to: null
+    id: settings
+  - trigger: state
+    entity_id: !input door_sensors
+    to: "on"
+    for:
+      minutes: !input door_open_delay
+    id: door
+  - trigger: state
+    entity_id: !input door_sensors
+    to: "off"
+    for:
+      minutes: !input door_close_delay
+    id: door
+  - trigger: template
+    value_template: >-
+      {%- set h = states(t_house) -%}
+      {%- set off = states(t_borte_offset) | float(0) if h == t_borte
+          else states(t_ferie_offset) | float(0) if h == t_ferie else 0 -%}
+      {%- set day = is_state(t_schedule, 'on') -%}
+      {%- set thr = states(t_thr_day if day else t_thr_night) | float(99) + off -%}
+      {{ is_state(t_climate, 'heat') and states(t_room) | float(0) > thr }}
+    for:
+      minutes: !input cool_delay
+    id: to_cool
+  - trigger: template
+    value_template: >-
+      {%- set h = states(t_house) -%}
+      {%- set off = states(t_borte_offset) | float(0) if h == t_borte
+          else states(t_ferie_offset) | float(0) if h == t_ferie else 0 -%}
+      {%- set day = is_state(t_schedule, 'on') -%}
+      {%- set heat = states(t_heat_day if day else t_heat_night) | float(-99) - off -%}
+      {{ is_state(t_climate, 'cool') and states(t_room) | float(99) < heat }}
+    for:
+      minutes: !input cool_delay
+    id: to_heat
+  - trigger: time_pattern
+    minutes: /15
+    id: periodic
+  - trigger: state
+    entity_id: !input climate_entity
+    to: "off"
+    for:
+      minutes: !input off_notify_delay
+    id: off_long
+  - trigger: state
+    entity_id: !input pause_boolean
+    to: "on"
+    for:
+      hours: !input pause_remind
+    id: pause_long
+
+variables:
+  climate_entity: !input climate_entity
+  room_sensor: !input room_sensor
+  door_sensors: !input door_sensors
+  correction: !input correction
+  correction_max: !input correction_max
+  dry_run: !input dry_run
+  schedule_entity: !input schedule_entity
+  heat_day: !input heat_day
+  heat_night: !input heat_night
+  cool_threshold_day: !input cool_threshold_day
+  cool_threshold_night: !input cool_threshold_night
+  cool_day: !input cool_day
+  cool_night: !input cool_night
+  season_select: !input season_select
+  season_heat_option: !input season_heat_option
+  season_cool_option: !input season_cool_option
+  house_mode: !input house_mode
+  borte_state: !input borte_state
+  ferie_state: !input ferie_state
+  borte_offset: !input borte_offset
+  ferie_offset: !input ferie_offset
+  door_heat: !input door_heat
+  door_cool: !input door_cool
+  door_open_delay: !input door_open_delay
+  door_close_delay: !input door_close_delay
+  party_boolean: !input party_boolean
+  party_until: !input party_until
+  party_setpoint: !input party_setpoint
+  party_hours: !input party_hours
+  pause_boolean: !input pause_boolean
+  status_text: !input status_text
+  notify_targets: !input notify_targets
+  off_repeat: !input off_repeat
+  name: "{{ state_attr(climate_entity, 'friendly_name') or climate_entity }}"
+  ack_action: "VARMEPUMPE_OK_{{ climate_entity }}"
+  tag: "varmepumpe_{{ climate_entity | replace('.', '_') }}"
+
+actions:
+  - choose:
+      - conditions: "{{ trigger.id == 'off_long' }}"
+        sequence:
+          - repeat:
+              sequence:
+                - repeat:
+                    for_each: "{{ notify_targets }}"
+                    sequence:
+                      - action: "{{ repeat.item }}"
+                        data:
+                          title: "{{ name }} er av"
+                          message: >-
+                            Har vært av siden
+                            {{ as_local(states[climate_entity].last_changed).strftime('%H:%M') }}.
+                            Blir ikke slått på automatisk.
+                          data:
+                            tag: "{{ tag }}"
+                            actions:
+                              - action: "{{ ack_action }}"
+                                title: Ja, med vilje
+                - wait_for_trigger:
+                    - trigger: state
+                      entity_id: !input climate_entity
+                      from: "off"
+                    - trigger: event
+                      event_type: mobile_app_notification_action
+                      event_data:
+                        action: "{{ ack_action }}"
+                  timeout:
+                    minutes: "{{ off_repeat }}"
+              until: "{{ wait.trigger is not none or not is_state(climate_entity, 'off') }}"
+          - if: "{{ not is_state(climate_entity, 'off') }}"
+            then:
+              - repeat:
+                  for_each: "{{ notify_targets }}"
+                  sequence:
+                    - action: "{{ repeat.item }}"
+                      data:
+                        message: clear_notification
+                        data:
+                          tag: "{{ tag }}"
+          - stop: done
+
+      - conditions: "{{ trigger.id == 'pause_long' }}"
+        sequence:
+          - repeat:
+              for_each: "{{ notify_targets }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  data:
+                    title: "{{ name }} står på pause"
+                    message: Automatikken har vært på pause i over et døgn. Slå av pause for å gå tilbake til planen.
+                    data:
+                      tag: "{{ tag }}_pause"
+          - stop: done
+
+      - conditions: "{{ trigger.id == 'party_on' }}"
+        sequence:
+          - action: input_datetime.set_datetime
+            target:
+              entity_id: "{{ party_until }}"
+            data:
+              timestamp: "{{ (now() + timedelta(hours=party_hours | float)).timestamp() | int }}"
+
+  - if: >-
+      {{ is_state(party_boolean, 'on')
+         and as_timestamp(states(party_until), 0) <= now().timestamp() + 30 }}
+    then:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: "{{ party_boolean }}"
+      - stop: party over, the state change triggers a new run
+
+  - variables:
+      room: "{{ states(room_sensor) | float(none) }}"
+      unit: "{{ state_attr(climate_entity, 'current_temperature') | float(none) }}"
+      current_mode: "{{ states(climate_entity) }}"
+      current_target: "{{ state_attr(climate_entity, 'temperature') | float(none) }}"
+      day: "{{ is_state(schedule_entity, 'on') }}"
+      house: "{{ states(house_mode) }}"
+      offset: >-
+        {{ states(borte_offset) | float(0) if house == borte_state
+           else states(ferie_offset) | float(0) if house == ferie_state else 0 }}
+      heat_sp: "{{ states(heat_day if day else heat_night) | float(20) - offset }}"
+      cool_thr: "{{ states(cool_threshold_day if day else cool_threshold_night) | float(26) + offset }}"
+      cool_sp: "{{ states(cool_day if day else cool_night) | float(24) + offset }}"
+      party: "{{ is_state(party_boolean, 'on') }}"
+      season: "{{ states(season_select) }}"
+      direct: "{{ trigger.id in ['start', 'season', 'party', 'pause', 'climate'] }}"
+      want_mode: >-
+        {%- if party -%} cool
+        {%- elif season == season_heat_option -%} heat
+        {%- elif season == season_cool_option -%} cool
+        {%- elif trigger.id == 'to_cool' -%} cool
+        {%- elif trigger.id == 'to_heat' -%} heat
+        {%- elif current_mode in ['heat', 'cool'] and not direct -%} {{ current_mode }}
+        {%- elif current_mode == 'cool' and trigger.id != 'party' and room is not none and room >= heat_sp -%} cool
+        {%- elif room is not none and room > cool_thr -%} cool
+        {%- else -%} heat
+        {%- endif -%}
+      base_sp: "{{ heat_sp if want_mode == 'heat' else (states(party_setpoint) | float(22) if party else cool_sp) }}"
+      door_value: "{{ door_heat if want_mode == 'heat' else door_cool }}"
+      doors: "{{ expand(door_sensors) | list }}"
+      door_open_long: >-
+        {{ doors | selectattr('state', 'eq', 'on')
+           | selectattr('last_changed', 'le', now() - timedelta(minutes=door_open_delay | float))
+           | list | count > 0 }}
+      door_closed_recent: >-
+        {{ doors | selectattr('state', 'eq', 'off')
+           | selectattr('last_changed', 'gt', now() - timedelta(minutes=door_close_delay | float))
+           | list | count > 0 }}
+      door_active: >-
+        {{ door_open_long or (door_closed_recent and current_mode == want_mode
+           and current_target == door_value | float) }}
+      corr: >-
+        {%- if correction and unit is not none and room is not none -%}
+          {{ [[unit - room, correction_max | float] | min, -(correction_max | float)] | max }}
+        {%- else -%}0{%- endif -%}
+      raw_sp: "{{ door_value | float if door_active else base_sp + corr }}"
+      step: "{{ state_attr(climate_entity, 'target_temp_step') | float(1) }}"
+      min_t: "{{ state_attr(climate_entity, 'min_temp') | float(10) }}"
+      max_t: "{{ state_attr(climate_entity, 'max_temp') | float(30) }}"
+      send_sp: "{{ [[(raw_sp / step) | round(0) * step, min_t] | max, max_t] | min }}"
+      mode_txt: "{{ 'Varme' if want_mode == 'heat' else 'Kjøling' }}"
+      sent_txt: "{{ '' if (send_sp - base_sp) | abs < 0.05 else ' (sendt ' ~ (send_sp | round(1)) ~ ')' }}"
+      period_txt: "{{ 'Dag' if day else 'Natt' }}"
+      status: >-
+        {%- if is_state(pause_boolean, 'on') -%}
+          Pause – styres manuelt
+        {%- elif current_mode == 'off' -%}
+          Av siden {{ as_local(states[climate_entity].last_changed).strftime('%d.%m %H:%M') }}
+        {%- elif current_mode in ['unavailable', 'unknown'] or room is none -%}
+          Utilgjengelig
+        {%- elif door_active -%}
+          {{ '[Test] ' if dry_run }}Dør åpen → {{ send_sp | round(1) }} °C · {{ period_txt }} · {{ house }}
+        {%- elif party -%}
+          {{ '[Test] ' if dry_run }}Fest til {{ as_timestamp(states(party_until), 0) | timestamp_custom('%H:%M') }} → {{ base_sp | round(1) }} °C{{ sent_txt }}
+        {%- else -%}
+          {{ '[Test] ' if dry_run }}{{ mode_txt }} {{ base_sp | round(1) }} °C{{ sent_txt }} · {{ period_txt }} · {{ house }}
+        {%- endif -%}
+      need_mode: "{{ current_mode != want_mode }}"
+      need_temp: >-
+        {%- if current_target is none -%} true
+        {%- elif need_mode or trigger.id != 'periodic' or door_active -%}
+          {{ (send_sp - current_target) | abs >= 0.05 }}
+        {%- else -%}
+          {{ (raw_sp - current_target) | abs >= 0.8 * step }}
+        {%- endif -%}
+
+  - if: "{{ states(status_text) != status[:255] }}"
+    then:
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ status_text }}"
+        data:
+          value: "{{ status[:255] }}"
+
+  - condition: "{{ is_state(pause_boolean, 'off') }}"
+  - condition: "{{ current_mode not in ['off', 'unavailable', 'unknown'] and room is not none }}"
+  - condition: "{{ need_mode or need_temp }}"
+
+  - if: "{{ dry_run }}"
+    then:
+      - action: logbook.log
+        data:
+          name: "{{ name }}"
+          entity_id: "{{ climate_entity }}"
+          message: >-
+            Testmodus ({{ trigger.id }}): ville satt {{ want_mode }} {{ send_sp }} °C
+            (nå {{ current_mode }} {{ current_target }}, rom {{ room }}, enhet {{ unit }})
+    else:
+      - if: "{{ need_mode }}"
+        then:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: "{{ climate_entity }}"
+            data:
+              hvac_mode: "{{ want_mode }}"
+          - delay:
+              seconds: 5
+      - action: climate.set_temperature
+        target:
+          entity_id: "{{ climate_entity }}"
+        data:
+          temperature: "{{ send_sp }}"
