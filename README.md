@@ -348,15 +348,15 @@ temperatures) also go to VictoriaMetrics (`compose/victoriametrics`), which
 keeps them forever. Grafana reads them through the `VictoriaMetrics` data
 source.
 
-HA side, in `configuration.yaml` on the HA box (not managed from this repo).
-HA's built-in InfluxDB integration, v1 API - VictoriaMetrics accepts it:
+HA side (on the HA box, not managed from this repo): HA's built-in InfluxDB
+integration, v1 API - VictoriaMetrics accepts it. Since HA 2026.3 the
+connection lives in the UI (Settings → Devices & services → InfluxDB:
+API version 1, host `192.168.0.240`, port `8428`, database `homeassistant`,
+no credentials). What to send stays in `configuration.yaml`; connection keys
+there trigger a "deprecated YAML" repair (removed 2026-11-21):
 
 ```yaml
 influxdb:
-  api_version: 1
-  host: 192.168.0.240
-  port: 8428
-  database: homeassistant
   # Metric names like sensor__temperature_value / sensor__energy_value,
   # with an entity_id label - easy to query in Grafana.
   measurement_attr: domain__device_class
