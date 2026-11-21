@@ -529,8 +529,8 @@ What the blueprint does:
   15 min below the heat setpoint. The season select can force `Varme` or
   `Kjøling`.
 - **Setpoints**: day/night base values from a schedule helper (on = day).
-  `husmodus` Borte/Ferie applies an offset: subtracted from heat, added to
-  cool and threshold.
+  `husmodus` Borte/Ferie applies an offset (helpers show it as negative, the
+  sign is ignored): subtracted from heat, added to cool and threshold.
 - **Door open** 3 min → 12 °C (heat) / 30 °C (cool); closed 1 min → normal.
 - **Party**: forces cool to the party temperature; switching it on sets the
   end time 4 h ahead (adjustable), switches itself off at the end time.

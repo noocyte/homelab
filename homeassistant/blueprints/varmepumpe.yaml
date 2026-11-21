@@ -150,7 +150,7 @@ blueprint:
             text: {}
         borte_offset:
           name: Avvik Borte
-          description: Trekkes fra varme, legges til kjøling og kjølegrense.
+          description: Trekkes fra varme, legges til kjøling og kjølegrense. Fortegnet ignoreres (−3 og 3 betyr det samme).
           selector:
             entity:
               filter:
@@ -351,8 +351,8 @@ triggers:
   - trigger: template
     value_template: >-
       {%- set h = states(t_house) -%}
-      {%- set off = states(t_borte_offset) | float(0) if h == t_borte
-          else states(t_ferie_offset) | float(0) if h == t_ferie else 0 -%}
+      {%- set off = (states(t_borte_offset) | float(0) if h == t_borte
+          else states(t_ferie_offset) | float(0) if h == t_ferie else 0) | abs -%}
       {%- set day = is_state(t_schedule, 'on') -%}
       {%- set thr = states(t_thr_day if day else t_thr_night) | float(99) + off -%}
       {{ is_state(t_climate, 'heat') and states(t_room) | float(0) > thr }}
@@ -362,8 +362,8 @@ triggers:
   - trigger: template
     value_template: >-
       {%- set h = states(t_house) -%}
-      {%- set off = states(t_borte_offset) | float(0) if h == t_borte
-          else states(t_ferie_offset) | float(0) if h == t_ferie else 0 -%}
+      {%- set off = (states(t_borte_offset) | float(0) if h == t_borte
+          else states(t_ferie_offset) | float(0) if h == t_ferie else 0) | abs -%}
       {%- set day = is_state(t_schedule, 'on') -%}
       {%- set heat = states(t_heat_day if day else t_heat_night) | float(-99) - off -%}
       {{ is_state(t_climate, 'cool') and states(t_room) | float(99) < heat }}
@@ -506,8 +506,8 @@ actions:
       day: "{{ is_state(schedule_entity, 'on') }}"
       house: "{{ states(house_mode) }}"
       offset: >-
-        {{ states(borte_offset) | float(0) if house == borte_state
-           else states(ferie_offset) | float(0) if house == ferie_state else 0 }}
+        {{ (states(borte_offset) | float(0) if house == borte_state
+           else states(ferie_offset) | float(0) if house == ferie_state else 0) | abs }}
       heat_sp: "{{ states(heat_day if day else heat_night) | float(20) - offset }}"
       cool_thr: "{{ states(cool_threshold_day if day else cool_threshold_night) | float(26) + offset }}"
       cool_sp: "{{ states(cool_day if day else cool_night) | float(24) + offset }}"
