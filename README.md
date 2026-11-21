@@ -509,9 +509,10 @@ secondpi is set up by hand once (not Flatcar, no Ignition):
    Then remove the key from `.env`, restart, and delete the key in Komodo.
 3. From then on Komodo deploys `pihole-secondpi` like any gitops stack.
 
-The Pi-hole that came with the Pi's OS image (installed natively) is
-stopped and disabled (`systemctl disable pihole-FTL`); a copy of its empty
-config is in `~/pihole-native-backup-2026-11-21.tgz` on the Pi.
+The Pi-hole that came with the Pi's OS image (installed natively) was
+removed on 2026-11-21 (files, cron jobs, `pihole` user, `pihole-meta` and its
+dependencies); a copy of all its files is in
+`~/pihole-native-full-backup-2026-11-21.tgz` on the Pi.
 
 ## Not managed here (yet)
 
