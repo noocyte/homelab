@@ -13,7 +13,7 @@ Proxmox (192.168.0.107, "pve")             ← managed by hand, NOT updated (NVI
      ├─ komodo.service   Komodo Core + Periphery (started by the OS)
      └─ Komodo stacks    everything in compose/ (deployed by Komodo from git)
 
-secondpi (Raspberry Pi 3 B+, .185)         ← backup Pi-hole, Komodo Periphery
+secondpi (Raspberry Pi 3 B+, .241)         ← backup Pi-hole, Komodo Periphery
 ```
 
 | Path | What |
@@ -491,11 +491,11 @@ Set up for the cabin (by hand, outside git):
 ## Backup DNS (secondpi)
 
 Two Pi-holes run the same `compose/pihole` stack from git: `pihole` on
-docker-host (.240) and `pihole-secondpi` on **secondpi** (192.168.0.185,
+docker-host (.240) and `pihole-secondpi` on **secondpi** (192.168.0.241,
 Raspberry Pi 3 B+, Raspberry Pi OS / Debian 13). Same settings, lists and
 local names, because the files are the same; nothing syncs between them at
 runtime, and each keeps its own query log. Both exporters are scraped
-(`192.168.0.185:9617` too). UniFi hands out both addresses as DNS servers.
+(`192.168.0.241:9617` too). UniFi hands out both addresses as DNS servers.
 
 secondpi is set up by hand once (not Flatcar, no Ignition):
 

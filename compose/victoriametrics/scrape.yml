@@ -10,7 +10,7 @@ scrape_configs:
   - job_name: pihole
     scrape_interval: 30s
     static_configs:
-      - targets: ["192.168.0.240:9617", "192.168.0.185:9617"]
+      - targets: ["192.168.0.240:9617", "192.168.0.241:9617"]
 
   # The Proxmox host's own hardware: node-exporter (Debian package) on pve,
   # incl. CPU temperatures, ZFS and SMART via the smartmon textfile collector.
