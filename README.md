@@ -514,6 +514,46 @@ removed on 2026-11-21 (files, cron jobs, `pihole` user, `pihole-meta` and its
 dependencies); a copy of all its files is in
 `~/pihole-native-full-backup-2026-11-21.tgz` on the Pi.
 
+## Heat pumps (Varmepumper)
+
+Both air-to-air heat pumps are controlled over Sensibo (IR). The logic is the
+blueprint `homeassistant/blueprints/varmepumpe.yaml`; everything else lives in
+Home Assistant. Loft (Fujitsu, `climate.loft`) runs on it; Stue (Daikin,
+`climate.stua_2`) still runs panhans' Advanced Heating Control.
+
+What the blueprint does:
+
+- **Room decides heat or cool** (season `Auto`): heat below the heat
+  setpoint; switch to cool only after the room has been above the cooling
+  threshold for 15 min, then cool to the cooling setpoint. Back to heat after
+  15 min below the heat setpoint. The season select can force `Varme` or
+  `Kjøling`.
+- **Setpoints**: day/night base values from a schedule helper (on = day).
+  `husmodus` Borte/Ferie applies an offset: subtracted from heat, added to
+  cool and threshold.
+- **Door open** 3 min → 12 °C (heat) / 30 °C (cool); closed 1 min → normal.
+- **Party**: forces cool to the party temperature; switching it on sets the
+  end time 4 h ahead (adjustable), switches itself off at the end time.
+- **Correction**: sends setpoint + (unit's own reading − room), rounded, so
+  the room and not the unit's ceiling sensor reaches the setpoint.
+- **Never sends `off`**, but leaves the unit alone while it is off and
+  notifies after 30 min, then every 2 h (button "Ja, med vilje" stops it).
+  **Pause** makes it hands-off while the unit runs; reminder after 24 h.
+- Status line in an `input_text`, e.g. `Varme 21.0 °C (sendt 22.0) · Dag · Hjemme`.
+  Test mode sends nothing and writes "would set …" to the logbook.
+
+Per heat pump in HA: a mean sensor group for room temperature, optionally a
+binary sensor group for doors, a schedule, helpers `varmepumpe_<rom>_*`
+(setpoints, offsets, season, party, party end, pause, status) and an
+automation from the blueprint. Add sensors or doors by editing the group.
+
+The Sensibo can't see the Loft remote, so HA does not notice an `off` from
+the remote, and the next command (IR always sends the full state) turns the
+unit back on. Switch off in HA or the Sensibo app; set Pause before a
+technician uses the remote.
+
+Updating: merge, then HA → Blueprints → Varmepumpe → Re-import.
+
 ## Not managed here (yet)
 
 - `compose/immich/` runs on VM 102 (`plex-enc`), deployed by hand.
