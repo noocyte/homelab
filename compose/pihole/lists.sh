@@ -6,10 +6,11 @@ set -eu
 
 C=pihole
 
-# Wait for Pi-hole to be ready (gravity.db exists)
+# Wait until Pi-hole is healthy. On a fresh volume it first builds
+# gravity.db from scratch, which would overwrite anything inserted earlier.
 i=0
-until docker exec "$C" test -f /etc/pihole/gravity.db 2>/dev/null; do
-  i=$((i+1)); [ "$i" -gt 60 ] && { echo "pihole not ready" >&2; exit 1; }
+until [ "$(docker inspect -f '{{.State.Health.Status}}' "$C" 2>/dev/null)" = healthy ]; do
+  i=$((i+1)); [ "$i" -gt 150 ] && { echo "pihole not healthy" >&2; exit 1; }
   sleep 2
 done
 
@@ -35,6 +36,8 @@ add 0 'auth.split.io'
 add 0 'click.discord.com'
 add 0 's.click.aliexpress.com'
 add 0 'www.kqzyfj.com'
+add 0 'events.mapbox.com'
+add 0 'o277218.ingest.sentry.io'
 add 2 'track.adtraction.com'
 add 2 'www.emjcd.com'
 add 2 '(\.|^)offers-images\.eu\.placewise\.com$'
