@@ -273,7 +273,7 @@
           "sort": "desc"
         }
       },
-      "description": "HGST SAS disks: rated for 60 \u00b0C; aim for under 45 \u00b0C. Dashed: room temperature (Home Assistant, garasjebod)."
+      "description": "HGST SAS disks: rated for 60 °C; aim for under 45 °C. Dashed: room temperature (Home Assistant, garasjebod)."
     },
     {
       "id": 4,
@@ -908,7 +908,7 @@
         "textMode": "value_and_name",
         "orientation": "horizontal"
       },
-      "description": "nvidia-smi works inside VM 102. BROKEN = exporter down or driver/library mismatch: reboot VM 102 (see proxmox/README.md \u2192 VM 102 notes)."
+      "description": "nvidia-smi works inside VM 102. BROKEN = exporter down or driver/library mismatch: reboot VM 102 (see proxmox/README.md → VM 102 notes)."
     },
     {
       "id": 13,
@@ -1069,6 +1069,325 @@
         }
       },
       "description": "Encoder/decoder = NVENC/NVDEC (Plex and Immich hardware transcoding). GPU = compute (Immich machine learning)."
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Power (whole server, Matter plug \"Core plug\")",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Now",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sensor__power_value{entity_id=\"garasje_core_plug_effekt\"}",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "orientation": "auto"
+      },
+      "description": "Live draw of the whole Proxmox server at the wall, from the IKEA Matter plug in Home Assistant (sensor.garasje_core_plug_effekt)."
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Average, last 7 days",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 36,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "avg_over_time((sensor__power_value{entity_id=\"garasje_core_plug_effekt\"} > 40)[7d:1m])",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "orientation": "auto"
+      },
+      "description": "Average draw while the server has power (readings under 40 W left out: the plug was used for something else before 2026-11-21, and shutdowns)."
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Energy, last 24 h",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 36,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "last_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[1d]) - (last_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[30d] offset 1d) or min_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[1d]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "orientation": "auto"
+      },
+      "description": "kWh used in the last 24 hours (sensor.garasje_core_plug_energi)."
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Energy, last 30 days",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 36,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "last_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[1d]) - (last_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[90d] offset 30d) or min_over_time(sensor__energy_value{entity_id=\"garasje_core_plug_energi\"}[30d]))",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatth",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "orientation": "auto"
+      },
+      "description": "kWh used in the last 30 days. Measured since 2026-11-21."
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Power draw",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "expr": "sensor__power_value{entity_id=\"garasje_core_plug_effekt\"}",
+          "legendFormat": "Proxmox server (W)",
+          "editorMode": "code",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "watt",
+          "min": 0,
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "description": "Whole server at the wall: host, disks, GPU and all VMs."
     }
   ],
   "templating": {
