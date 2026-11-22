@@ -549,7 +549,7 @@ actions:
       max_t: "{{ state_attr(climate_entity, 'max_temp') | float(30) }}"
       send_sp: "{{ [[(raw_sp / step) | round(0) * step, min_t] | max, max_t] | min }}"
       mode_txt: "{{ 'Varme' if want_mode == 'heat' else 'Kjøling' }}"
-      sent_txt: "{{ '' if (send_sp - base_sp) | abs < 0.05 else ' (sendt ' ~ (send_sp | round(1)) ~ ')' }}"
+      sent_txt: "{{ '' if (send_sp - base_sp) | abs < 0.05 else '(sendt ' ~ (send_sp | round(1)) ~ ')' }}"
       period_txt: "{{ 'Dag' if day else 'Natt' }}"
       status: >-
         {%- if is_state(pause_boolean, 'on') -%}
@@ -561,9 +561,9 @@ actions:
         {%- elif door_active -%}
           {{ '[Test] ' if dry_run }}Dør åpen → {{ send_sp | round(1) }} °C · {{ period_txt }} · {{ house }}
         {%- elif party -%}
-          {{ '[Test] ' if dry_run }}Fest til {{ as_timestamp(states(party_until), 0) | timestamp_custom('%H:%M') }} → {{ base_sp | round(1) }} °C{{ sent_txt }}
+          {{ '[Test] ' if dry_run }}Fest til {{ as_timestamp(states(party_until), 0) | timestamp_custom('%H:%M') }} → {{ base_sp | round(1) }} °C{{ (' ' ~ sent_txt) if sent_txt }}
         {%- else -%}
-          {{ '[Test] ' if dry_run }}{{ mode_txt }} {{ base_sp | round(1) }} °C{{ sent_txt }} · {{ period_txt }} · {{ house }}
+          {{ '[Test] ' if dry_run }}{{ mode_txt }} {{ base_sp | round(1) }} °C{{ (' ' ~ sent_txt) if sent_txt }} · {{ period_txt }} · {{ house }}
         {%- endif -%}
       need_mode: "{{ current_mode != want_mode }}"
       need_temp: >-
