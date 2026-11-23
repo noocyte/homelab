@@ -14,7 +14,7 @@
 # and start it again.
 services:
   victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.155.0
+    image: victoriametrics/victoria-metrics:v1.156.0
     restart: unless-stopped
     ports:
       - 8428:8428
@@ -35,7 +35,7 @@ services:
   # for a snapshot, copies what changed since the last run, and deletes the
   # snapshot again. Refuses to run if the ZFS share isn't mounted.
   vmbackup:
-    image: victoriametrics/vmbackup:v1.155.0
+    image: victoriametrics/vmbackup:v1.156.0
     restart: unless-stopped
     entrypoint: ["sleep", "infinity"]
     volumes:
